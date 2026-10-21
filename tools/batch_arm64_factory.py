@@ -53,7 +53,7 @@ ROOT = Path(__file__).resolve().parent.parent
 STAGING = ROOT / "staging" / "packages-arm64.json"
 INDEX = ROOT / "packages-arm64.json"
 CACHE_DIR = Path.home() / ".cache" / "mindos-arm64-factory"
-MAX_ASSETS = 990
+MAX_ASSETS = 980
 MAX_SIZE = 1500 * 1024 * 1024
 MAINTAINER = "MindOS Team <https://github.com/MindOS-Official>"
 ORIGIN = "debian/trixie"
@@ -261,9 +261,14 @@ def convert_deb_to_mind(deb_path, out_file, pkg_info, work_base=None):
     return out_file, record
 
 
+def sanitize_filename(name):
+    return re.sub(r"[^A-Za-z0-9._+-]", ".", name)
+
+
 def process_package(pkg_info, out_dir):
     try:
-        filename = f"{pkg_info['name']}-{pkg_info['version']}-1-{ARCH}.mind"
+        raw_filename = f"{pkg_info['name']}-{pkg_info['version']}-1-{ARCH}.mind"
+        filename = sanitize_filename(raw_filename)
         out_file = Path(out_dir) / filename
         work_base = str(SHM_DIR) if SHM_DIR else None
         with tempfile.NamedTemporaryFile(suffix=".deb", dir=work_base) as tmp_deb:
@@ -308,30 +313,44 @@ def ensure_chunk_release(repo, tag):
 
 
 def upload_batch(repo, tag, file_paths):
-    """Bir grup .mind paketini GitHub Releases chunk'ına yükler"""
+    """Bir grup .mind paketini GitHub Releases chunk'ına yükler.
+    Toplu yükleme başarısız olursa tek tek yüklemeyi dener ve başarılı olanları döner."""
     if not file_paths:
-        return
+        return []
     ensure_chunk_release(repo, tag)
     log(f"  ⬆️ {len(file_paths)} paket {tag} etiketine yükleniyor...")
-    gh_cmd("release", "upload", tag, "-R", repo, "--clobber", *[str(p) for p in file_paths], check=True)
+    try:
+        gh_cmd("release", "upload", tag, "-R", repo, "--clobber", *[str(p) for p in file_paths], check=True)
+        return [str(p) for p in file_paths]
+    except Exception as bulk_err:
+        log(f"  ⚠ Toplu yükleme hatası ({bulk_err}); paketler tek tek yükleniyor...")
+        succeeded = []
+        for p in file_paths:
+            try:
+                gh_cmd("release", "upload", tag, "-R", repo, "--clobber", str(p), check=True)
+                succeeded.append(str(p))
+            except Exception as single_err:
+                log(f"  ✗ Tekil yükleme başarısız ({Path(p).name}): {single_err}")
+        return succeeded
 
 
 class PipelinedUploader:
     """Paketleme işini engellemeden arka planda asenkron chunk yükleyici"""
-    def __init__(self, repo, clean_uploaded=True, batch_size=30, debounce_sec=4):
+    def __init__(self, repo, clean_uploaded=True, batch_size=25, debounce_sec=3):
         self.repo = repo
         self.clean_uploaded = clean_uploaded
         self.batch_size = batch_size
         self.debounce_sec = debounce_sec
         self.queue = queue.Queue()
         self.stop_requested = threading.Event()
-        self.uploaded_count = 0
+        self.uploaded_files = set()
+        self.failed_files = set()
         self.failures = []
         self.thread = threading.Thread(target=self._worker, daemon=True)
         self.thread.start()
 
     def submit(self, chunk_tag, file_path):
-        self.queue.put((chunk_tag, file_path))
+        self.queue.put((chunk_tag, str(file_path)))
 
     def _worker(self):
         pending = []
@@ -375,18 +394,18 @@ class PipelinedUploader:
         for tag, fpath in items:
             by_tag.setdefault(tag, []).append(fpath)
         for tag, flist in by_tag.items():
-            try:
-                upload_batch(self.repo, tag, flist)
-                self.uploaded_count += len(flist)
+            succeeded = upload_batch(self.repo, tag, flist)
+            for f in succeeded:
+                self.uploaded_files.add(f)
                 if self.clean_uploaded:
-                    for f in flist:
-                        try:
-                            Path(f).unlink(missing_ok=True)
-                        except Exception:
-                            pass
-            except Exception as e:
-                log(f"  ✗ Yükleme hatası ({tag}): {e}")
-                self.failures.append((tag, str(e)))
+                    try:
+                        Path(f).unlink(missing_ok=True)
+                    except Exception:
+                        pass
+            failed = set(flist) - set(succeeded)
+            for f in failed:
+                self.failed_files.add(f)
+                self.failures.append((tag, f))
 
     def close(self):
         self.stop_requested.set()
@@ -493,9 +512,10 @@ def main():
 
     uploader = None
     if args.upload:
-        uploader = PipelinedUploader(args.repo, clean_uploaded=args.clean_uploaded, batch_size=30, debounce_sec=4)
+        uploader = PipelinedUploader(args.repo, clean_uploaded=args.clean_uploaded, batch_size=25, debounce_sec=3)
 
     start_time = time.time()
+    staged_records = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         futures = {executor.submit(process_package, p, out_dir): p["name"] for p in candidates}
         for future in concurrent.futures.as_completed(futures):
@@ -505,11 +525,10 @@ def main():
                 if ok:
                     success_count += 1
                     record = res
-                    chunk_tag = get_chunk_tag(len(existing))
+                    chunk_tag = get_chunk_tag(len(existing) + len(staged_records))
                     record["chunk_tag"] = chunk_tag
-                    clean_filename = re.sub(r"[^A-Za-z0-9._+-]", ".", record['filename'])
-                    record["url"] = f"https://github.com/{args.repo}/releases/download/{chunk_tag}/{clean_filename}"
-                    existing[record["name"]] = record
+                    record["url"] = f"https://github.com/{args.repo}/releases/download/{chunk_tag}/{record['filename']}"
+                    staged_records[str(file_or_err)] = record
                     log(f"  ✓ [{success_count}/{len(candidates)}] {pkg_name} ({record['size'] // 1024} KB) -> {chunk_tag}")
 
                     if uploader:
@@ -525,7 +544,15 @@ def main():
     if uploader:
         log("  ⏳ Arka plan yüklemeleri tamamlanıyor...")
         uploader.close()
-        log(f"  ⬆️ Toplam {uploader.uploaded_count} paket yüklendi.")
+        for fpath, record in staged_records.items():
+            if fpath in uploader.uploaded_files:
+                existing[record["name"]] = record
+            else:
+                log(f"  ⚠ Paket GitHub'a yüklenemediği için indekse eklenmedi: {record['name']}")
+        log(f"  ⬆️ Toplam {len(uploader.uploaded_files)} paket başarıyla yüklendi.")
+    else:
+        for record in staged_records.values():
+            existing[record["name"]] = record
 
     elapsed = time.time() - start_time
     rate = (success_count / (elapsed / 60)) if elapsed > 0 else 0

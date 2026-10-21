@@ -109,8 +109,22 @@ def clean_uploaded_files():
     files = list(OUT_DIR.glob("*.mind"))
     if not files:
         return
-    log(f"🧹 Disk alanını korumak için {len(files)} adet kalan .mind dosyası siliniyor...")
-    for f in files:
+    # Yalnızca indekste kayıtlı (başarıyla işlenmiş/yüklenmiş) dosyaları sil
+    known_filenames = set()
+    for idx_f in (INDEX_FILE, INDEX_ARM64_FILE):
+        if idx_f.exists():
+            try:
+                data = json.loads(idx_f.read_text(encoding="utf-8"))
+                for p in data.get("packages", []):
+                    if p.get("filename"):
+                        known_filenames.add(p["filename"])
+            except Exception:
+                pass
+    to_delete = [f for f in files if f.name in known_filenames or not known_filenames]
+    if not to_delete:
+        return
+    log(f"🧹 Disk alanını korumak için {len(to_delete)} adet işlenmiş .mind dosyası siliniyor...")
+    for f in to_delete:
         try:
             f.unlink()
         except OSError:

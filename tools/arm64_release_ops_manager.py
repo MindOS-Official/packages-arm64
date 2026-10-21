@@ -3,15 +3,16 @@
 
 Bu araç MindOS ARM64 paket deposunun GitHub Releases ve indeks dağıtım operasyonlarını
 tek merkezden otomatik ve güvenli şekilde yönetir:
-  1. out_arm64/ klasöründeki .mind paketlerini izler ve doğrular.
+  1. out_arm64/ klasöründeki .mind paketlerini ve staging/packages-arm64.json dosyasını izler.
   2. GitHub Releases chunk'larına (v1.0-chunk-01, v1.0-chunk-02 vb.) toplu yükleme yapar.
   3. Chunk ~980 pakete ulaştığında bir sonraki chunk'ı (v1.0-chunk-XX) otomatik açar.
   4. GitHub API hız sınırlarını (rate limit / secondary rate limit) ve ağ hatalarını
      üstel geri çekilme (exponential backoff) ile yönetir.
   5. Ed25519 sürüm anahtarıyla packages.json ve system.json'u imzalar.
-  6. İmzayı kriptografik olarak doğrular, git deposuna commit ve push eder.
-  7. Disk dolmasını engellemek için yüklenen dosyaları anında temizler.
-  8. Canlı yükleme ve depo metriklerini detaylı raporlar.
+  6. İmzaları (packages.json, packages-arm64.json, system.json) kriptografik olarak doğrular.
+  7. İmzalı indeksleri git origin main dalına rebase ve yeniden deneme mekanizmasıyla push eder.
+  8. Disk dolmasını engellemek için yüklenen dosyaları anında temizler.
+  9. Canlı yükleme ve depo metriklerini detaylı raporlar.
 
 Kullanım:
   python3 tools/arm64_release_ops_manager.py --status
@@ -36,7 +37,7 @@ import tempfile
 import time
 
 REPO_DEFAULT = os.environ.get("MIND_REPO_ARM64", "MindOS-Official/packages-arm64")
-MAX_ASSETS_PER_CHUNK = 980  # GitHub limit: 1000 assets per release
+MAX_ASSETS_PER_CHUNK = 980  # GitHub limit: 1000 assets per release (980 güvenlik marjı)
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "out_arm64"
 STAGING_JSON = ROOT / "staging" / "packages.json"
@@ -64,6 +65,7 @@ def gh_cmd(*args, repo=REPO_DEFAULT, check=True, max_retries=6, base_delay=5):
     if "-R" not in args and "--repo" not in args:
         cmd.extend(["-R", repo])
 
+    res = None
     for attempt in range(max_retries):
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode == 0:
@@ -114,7 +116,7 @@ class ARM64ReleaseOpsManager:
         if self._cached_chunks is not None and not force_refresh:
             return self._cached_chunks
 
-        res = gh_cmd("release", "list", "--json", "tagName,name,isLatest,publishedAt", repo=self.repo, check=False)
+        res = gh_cmd("release", "list", "--limit", "100", "--json", "tagName,name,isLatest,publishedAt", repo=self.repo, check=False)
         if res.returncode != 0:
             log(f"Release listesi alınamadı: {res.stderr}", "⚠")
             return []
@@ -163,6 +165,16 @@ class ARM64ReleaseOpsManager:
 
     def get_chunk_asset_count(self, tag, force_refresh=False):
         return len(self.get_chunk_asset_names(tag, force_refresh))
+
+    def get_all_remote_asset_names(self, force_refresh=False):
+        """Tüm chunk'lardaki remote asset adlarını ve ait oldukları tag'i döner."""
+        chunks = self.fetch_all_chunks(force_refresh=force_refresh)
+        all_assets = {}
+        for c in chunks:
+            names = self.get_chunk_asset_names(c["tag"], force_refresh=force_refresh)
+            for n in names:
+                all_assets[n] = c["tag"]
+        return all_assets
 
     def ensure_chunk_exists(self, chunk_num):
         """Chunk release'in var olduğunu doğrular, yoksa oluşturur."""
@@ -260,6 +272,37 @@ class ARM64ReleaseOpsManager:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         Path(path).write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 
+    def load_staging_index(self):
+        """staging/packages-arm64.json ve staging/packages.json arasından en güncel olanı yükler ve eşitler."""
+        arm_exists = STAGING_ARM64_JSON.exists()
+        pkg_exists = STAGING_JSON.exists()
+
+        if arm_exists and pkg_exists:
+            d_arm = self.load_index(STAGING_ARM64_JSON)
+            d_pkg = self.load_index(STAGING_JSON)
+            pkgs_by_name = {p["name"]: p for p in d_pkg.get("packages", [])}
+            for p in d_arm.get("packages", []):
+                if p["name"] not in pkgs_by_name:
+                    pkgs_by_name[p["name"]] = p
+                else:
+                    pkgs_by_name[p["name"]].update(p)
+            base = d_arm if len(d_arm.get("packages", [])) >= len(d_pkg.get("packages", [])) else d_pkg
+            base["packages"] = sorted(pkgs_by_name.values(), key=lambda p: p["name"])
+            base["total_packages"] = len(base["packages"])
+            self.save_index(STAGING_JSON, base)
+            self.save_index(STAGING_ARM64_JSON, base)
+            return base
+        elif arm_exists:
+            d = self.load_index(STAGING_ARM64_JSON)
+            self.save_index(STAGING_JSON, d)
+            return d
+        elif pkg_exists:
+            d = self.load_index(STAGING_JSON)
+            self.save_index(STAGING_ARM64_JSON, d)
+            return d
+        else:
+            return self.load_index(STAGING_JSON)
+
     def upload_pending_packages(self, batch_size=25, clean_local=True):
         """out_arm64 klasöründeki dosyaları chunk'lara yükler ve staging indeksini günceller."""
         if not OUT_DIR.exists():
@@ -272,11 +315,14 @@ class ARM64ReleaseOpsManager:
 
         log(f"out_arm64/ içinde {len(files)} adet paket tespit edildi. Yükleme planlanıyor...", "🔍")
 
-        staging_data = self.load_index(STAGING_JSON)
+        staging_data = self.load_staging_index()
         existing_pkgs = {p["name"]: p for p in staging_data.get("packages", [])}
 
         uploaded_total = 0
         failed_total = 0
+
+        # Tüm uzak asset haritasını al (çift yüklemeyi engellemek için)
+        all_remote_assets = self.get_all_remote_asset_names(force_refresh=True)
 
         # Aktif chunk'ı bul
         curr_tag, curr_num, curr_asset_count = self.get_active_upload_chunk()
@@ -302,9 +348,18 @@ class ARM64ReleaseOpsManager:
             for f in batch:
                 if not f.is_file():
                     continue
-                if f.name in chunk_remote_assets:
-                    # Zaten uzak sunucuda var
-                    log(f"Zaten mevcut: {f.name} -> {curr_tag}", "ℹ")
+
+                clean_name = re.sub(r"[^A-Za-z0-9._+-]", ".", f.name)
+                # Bu asset herhangi bir chunk'a zaten yüklenmiş mi?
+                already_in_chunk = all_remote_assets.get(f.name) or all_remote_assets.get(clean_name)
+                if already_in_chunk:
+                    log(f"Zaten mevcut: {f.name} -> {already_in_chunk}", "ℹ")
+                    pkg_base = f.name.split("-")[0]
+                    if pkg_base not in existing_pkgs:
+                        info = self.inspect_mind_file(f)
+                        info["chunk_tag"] = already_in_chunk
+                        info["url"] = f"https://github.com/{self.repo}/releases/download/{already_in_chunk}/{clean_name}"
+                        existing_pkgs[info["name"]] = info
                     if clean_local:
                         try:
                             f.unlink(missing_ok=True)
@@ -326,9 +381,17 @@ class ARM64ReleaseOpsManager:
                 # İndeks kayıtlarını güncelle
                 for f in batch_to_upload:
                     info = self.inspect_mind_file(f)
+                    clean_name = re.sub(r"[^A-Za-z0-9._+-]", ".", f.name)
                     info["chunk_tag"] = curr_tag
-                    info["url"] = f"https://github.com/{self.repo}/releases/download/{curr_tag}/{f.name}"
-                    existing_pkgs[info["name"]] = info
+                    info["url"] = f"https://github.com/{self.repo}/releases/download/{curr_tag}/{clean_name}"
+
+                    if info["name"] in existing_pkgs:
+                        existing_pkgs[info["name"]].update(info)
+                    else:
+                        existing_pkgs[info["name"]] = info
+
+                    all_remote_assets[clean_name] = curr_tag
+                    all_remote_assets[f.name] = curr_tag
 
                     if clean_local:
                         try:
@@ -354,12 +417,16 @@ class ARM64ReleaseOpsManager:
         if not SIGN_TOOL.exists():
             raise FileNotFoundError(f"İmzalama aracı bulunamadı: {SIGN_TOOL}")
 
+        # Staging dosyalarını eşitle
+        self.load_staging_index()
+
         log("Taslak indeks denetlenip Ed25519 ile imzalanıyor...", "🔏")
         res = subprocess.run([
             sys.executable,
             str(SIGN_TOOL),
             "--arch", "arm64",
             "--repo", self.repo,
+            "--staging", str(STAGING_JSON),
             "--yes"
         ], cwd=str(ROOT), capture_output=True, text=True)
 
@@ -386,12 +453,12 @@ class ARM64ReleaseOpsManager:
         return True
 
     def verify_cryptographic_signatures(self):
-        """packages.json ve system.json Ed25519 imzalarını doğrular."""
+        """packages.json, packages-arm64.json ve system.json Ed25519 imzalarını doğrular."""
         if not shutil.which("openssl"):
             log("openssl bulunamadı, imza doğrulama atlandı.", "⚠")
             return True
 
-        files_to_verify = [INDEX_JSON, SYSTEM_JSON]
+        files_to_verify = [INDEX_JSON, INDEX_ARM64_JSON, SYSTEM_JSON]
         for f in files_to_verify:
             sig_file = Path(f"{f}.sig")
             if not f.exists() or not sig_file.exists():
@@ -460,8 +527,20 @@ class ARM64ReleaseOpsManager:
         subprocess.run(["git", "commit", "-m", msg], cwd=str(ROOT), check=True)
 
         log("Git origin main ile rebase ve push yapılıyor...", "🚀")
-        subprocess.run(["git", "pull", "--rebase", "origin", "main"], cwd=str(ROOT), check=True)
-        subprocess.run(["git", "push", "origin", "main"], cwd=str(ROOT), check=True)
+        pushed = False
+        res = None
+        for attempt in range(5):
+            subprocess.run(["git", "pull", "--rebase", "origin", "main"], cwd=str(ROOT), check=False)
+            res = subprocess.run(["git", "push", "origin", "main"], cwd=str(ROOT), capture_output=True, text=True)
+            if res.returncode == 0:
+                pushed = True
+                break
+            log(f"Git push uyarısı (deneme {attempt + 1}/5): {res.stderr.strip()[:100]}", "⏳")
+            time.sleep(2 * (attempt + 1))
+
+        if not pushed:
+            raise RuntimeError(f"Git push tüm denemelere rağmen başarısız oldu: {res.stderr if res else ''}")
+
         log("✓ Git push başarıyla tamamlandı.", "✨")
         return True
 
@@ -484,7 +563,7 @@ class ARM64ReleaseOpsManager:
             })
 
         idx_data = self.load_index(INDEX_JSON)
-        stg_data = self.load_index(STAGING_JSON)
+        stg_data = self.load_staging_index()
 
         pending_local_files = len(list(OUT_DIR.glob("*.mind"))) if OUT_DIR.exists() else 0
 
@@ -518,7 +597,7 @@ class ARM64ReleaseOpsManager:
         print("=" * 70)
         print(f"  Depo               : {stats['repo']}")
         print(f"  Yayınlanan İndeks  : {stats['published_packages']} paket (packages.json)")
-        print(f"  Taslak İndeks      : {stats['staging_packages']} paket (staging/packages.json)")
+        print(f"  Taslak İndeks      : {stats['staging_packages']} paket (staging/packages-arm64.json)")
         print(f"  Bekleyen Yerel     : {stats['pending_local_files']} .mind paketi (out_arm64/)")
         print(f"  Kriptografik İmza  : {'✓ GEÇERLİ (Ed25519)' if stats['signatures_valid'] else '✗ GEÇERSİZ'}")
         print(f"  Son Git Commit     : {stats['latest_commit']}")
@@ -526,7 +605,7 @@ class ARM64ReleaseOpsManager:
         print(f"  GitHub Releases Parçaları (Chunks) - Toplam {stats['total_remote_assets']} Asset:")
         for c in stats["chunks"]:
             status_symbol = "🔒 DOLU" if c["is_full"] else "🟢 AKTİF"
-            bar_len = int(c["capacity_pct"] // 5)
+            bar_len = min(20, int(c["capacity_pct"] // 5))
             progress_bar = "[" + "#" * bar_len + "." * (20 - bar_len) + "]"
             print(f"    • {c['tag']:<15} : {c['asset_count']:>4}/{self.max_chunk_assets} {progress_bar} {c['capacity_pct']:>5.1f}% | {status_symbol}")
         print("=" * 70 + "\n")
@@ -565,12 +644,37 @@ def main():
         log(f"Sürekli ARM64 Release Operasyon Yöneticisi devrede ({args.interval} sn aralık)...", "👀")
         while True:
             try:
-                pending = len(list(OUT_DIR.glob("*.mind"))) if OUT_DIR.exists() else 0
-                if pending > 0:
-                    log(f"İzleme: {pending} bekleyen paket tespit edildi, eşitleme yapılıyor...", "⚡")
-                    mgr.upload_pending_packages(batch_size=args.batch_size)
+                # 1. out_arm64/ klasöründeki bekleyen .mind paketlerini kontrol et
+                pending_files = list(OUT_DIR.glob("*.mind")) if OUT_DIR.exists() else []
+                uploaded = False
+                if pending_files:
+                    log(f"İzleme: {len(pending_files)} bekleyen paket tespit edildi, yükleme başlatılıyor...", "⚡")
+                    up, fail = mgr.upload_pending_packages(batch_size=args.batch_size)
+                    if up > 0:
+                        uploaded = True
+
+                # 2. staging/packages-arm64.json ve staging/packages.json değişikliklerini izle
+                staging_modified = False
+                for stg_path in [STAGING_ARM64_JSON, STAGING_JSON]:
+                    if stg_path.exists():
+                        stg_data = mgr.load_index(stg_path)
+                        idx_data = mgr.load_index(INDEX_JSON)
+                        stg_cnt = len(stg_data.get("packages", []))
+                        idx_cnt = len(idx_data.get("packages", []))
+                        if stg_cnt > idx_cnt:
+                            staging_modified = True
+                            break
+
+                # Git status denetimi: staging veya indeks değişmiş mi?
+                git_st = subprocess.run(["git", "status", "--porcelain", "staging/"], cwd=str(ROOT), capture_output=True, text=True)
+                if git_st.stdout.strip():
+                    staging_modified = True
+
+                if uploaded or staging_modified:
+                    log("İzleme: Yeni paketler veya taslak indeks güncellemesi tespit edildi, imzalanıyor...", "🔏")
                     mgr.sign_and_publish_index(auto_push=True)
                     mgr.print_dashboard()
+
                 time.sleep(args.interval)
             except KeyboardInterrupt:
                 log("İzleme kullanıcı tarafından durduruldu.", "🛑")
