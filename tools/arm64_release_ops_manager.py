@@ -300,6 +300,8 @@ class ARM64ReleaseOpsManager:
             # Dosyaların metadata ve staging kayıtlarını hazırla
             batch_to_upload = []
             for f in batch:
+                if not f.is_file():
+                    continue
                 if f.name in chunk_remote_assets:
                     # Zaten uzak sunucuda var
                     log(f"Zaten mevcut: {f.name} -> {curr_tag}", "ℹ")
@@ -311,6 +313,7 @@ class ARM64ReleaseOpsManager:
                     continue
                 batch_to_upload.append(f)
 
+            batch_to_upload = [p for p in batch_to_upload if p.is_file()]
             if not batch_to_upload:
                 continue
 
