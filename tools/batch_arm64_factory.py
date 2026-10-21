@@ -101,8 +101,8 @@ def fetch_popcon():
             text = gzip.decompress(r.read()).decode("utf-8", "replace")
         for line in text.splitlines():
             parts = line.split()
-            if len(parts) > 2 and parts[0].isdigit():
-                rank.setdefault(parts[1], int(parts[0]))
+            if len(parts) > 2 and parts[0].isdigit() and parts[2].isdigit():
+                rank.setdefault(parts[1], int(parts[2]))
         cache_file.write_text(json.dumps(rank), encoding="utf-8")
     except Exception as e:
         log(f"  ⚠ popcon alınamadı ({e}), alfabetik sıra kullanılacak")
