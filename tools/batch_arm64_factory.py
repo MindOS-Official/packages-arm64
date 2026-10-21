@@ -507,7 +507,8 @@ def main():
                     record = res
                     chunk_tag = get_chunk_tag(len(existing))
                     record["chunk_tag"] = chunk_tag
-                    record["url"] = f"https://github.com/{args.repo}/releases/download/{chunk_tag}/{record['filename']}"
+                    clean_filename = re.sub(r"[^A-Za-z0-9._+-]", ".", record['filename'])
+                    record["url"] = f"https://github.com/{args.repo}/releases/download/{chunk_tag}/{clean_filename}"
                     existing[record["name"]] = record
                     log(f"  ✓ [{success_count}/{len(candidates)}] {pkg_name} ({record['size'] // 1024} KB) -> {chunk_tag}")
 
