@@ -1,0 +1,2506 @@
+#!/usr/bin/env python3
+# ==============================================================================
+# MindOS Sunrise Official Package Manager (mindpkg)
+# Native Package Format: .mind (Zstandard compressed container)
+# Official Repository: https://github.com/MindOS-Official/packages
+# ==============================================================================
+
+import os
+import sys
+import json
+import shutil
+import hashlib
+import re
+import subprocess
+import tempfile
+import fcntl
+import urllib.request
+import urllib.error
+from pathlib import Path
+
+VERSION = "1.11.0"
+CONFIG_FILE = "/etc/mindpkg/mindpkg.conf"
+REPOS_DIR = "/etc/mindpkg/repos.d"
+DB_DIR = "/var/lib/mindpkg"
+INSTALLED_DIR = f"{DB_DIR}/installed"
+REPOS_CACHE = f"{DB_DIR}/repos"
+CACHE_DIR = "/var/cache/mindpkg/pkg"
+HOOKS_DIR = f"{DB_DIR}/hooks"
+LOCK_FILE = f"{DB_DIR}/lock"
+OFFLINE_DIR = f"{DB_DIR}/offline"            # yeniden başlatınca kurulacak güncelleme (indirilmiş, doğrulanmış)
+OFFLINE_RESULT = f"{DB_DIR}/offline-result.json"
+OFFLINE_LOG = "/var/log/mindos-update.log"
+SYSTEM_UPDATE_LINK = "/system-update"         # systemd çevrimdışı güncelleme işareti (systemd.offline-updates(7))
+RELEASE_FILE = "/etc/mindos-release"
+DEFAULT_RELEASE = "1.0"
+
+# ANSI Colors
+COLOR_BANNER = "\033[1;33m"  # Sunrise Gold
+COLOR_YELLOW = "\033[1;33m"
+COLOR_ACCENT = "\033[1;36m"  # Cyan
+COLOR_GREEN = "\033[1;32m"
+COLOR_RED = "\033[1;31m"
+COLOR_BOLD = "\033[1m"
+COLOR_RESET = "\033[0m"
+
+
+def get_system_arch():
+    """Sistem mimarisini döner: 'x86_64' veya 'aarch64'"""
+    m = os.uname().machine.lower()
+    if m in ("aarch64", "arm64", "armv8l", "armv8b"):
+        return "aarch64"
+    return "x86_64"
+
+
+def get_debian_arch():
+    """Debian paket mimarisini döner: 'amd64' veya 'arm64'"""
+    return "arm64" if get_system_arch() == "aarch64" else "amd64"
+
+
+def get_default_repo_url(arch=None):
+    """Mimariye göre varsayılan resmi MindOS depo adresi"""
+    if arch is None:
+        arch = get_system_arch()
+    if arch in ("aarch64", "arm64"):
+        return "https://raw.githubusercontent.com/MindOS-Official/packages-arm64/main"
+    return "https://raw.githubusercontent.com/MindOS-Official/packages/main"
+
+
+def get_default_config():
+    arch = get_system_arch()
+    return {
+        "architecture": arch,
+        "cache_dir": CACHE_DIR,
+        "repositories": [
+            {
+                "name": "official",
+                "url": get_default_repo_url(arch),
+                "enabled": True
+            }
+        ]
+    }
+
+
+DEFAULT_CONFIG = get_default_config()
+
+
+def print_banner():
+    print(f"{COLOR_BANNER}🌅 MindOS Package Manager (mindpkg v{VERSION}){COLOR_RESET}")
+    print(f"{COLOR_ACCENT}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{COLOR_RESET}")
+
+
+def ensure_directories():
+    try:
+        for d in [DB_DIR, INSTALLED_DIR, REPOS_CACHE, CACHE_DIR, HOOKS_DIR, "/etc/mindpkg", REPOS_DIR]:
+            Path(d).mkdir(parents=True, exist_ok=True)
+        if not os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(get_default_config(), f, indent=4)
+    except PermissionError:
+        if os.geteuid() == 0:
+            raise  # yetkisiz kullanıcı (ör. Mind Arc'ın 'mindpkg check' çağrısı) yalnızca okur
+
+
+def load_config():
+    ensure_directories()
+    sys_arch = get_system_arch()
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    except Exception:
+        return get_default_config()
+
+    # Otomatik çoklu mimari yönlendirmesi: sistem aarch64 ise ve resmi depo x86 deposuna bakıyorsa arm64 reposuna yönlendir
+    cfg_arch = cfg.get("architecture")
+    if not cfg_arch:
+        cfg["architecture"] = sys_arch
+    for repo in cfg.get("repositories", []):
+        if repo.get("name") == "official":
+            url = repo.get("url", "")
+            if sys_arch == "aarch64" and "MindOS-Official/packages/main" in url:
+                repo["url"] = get_default_repo_url("aarch64")
+            elif sys_arch == "x86_64" and "MindOS-Official/packages-arm64/main" in url:
+                repo["url"] = get_default_repo_url("x86_64")
+    return cfg
+
+
+def check_root():
+    if os.geteuid() != 0:
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Bu işlem için yönetici (root) yetkisi gereklidir.")
+        print(f"Lütfen komutu {COLOR_BOLD}sudo mindpkg ...{COLOR_RESET} şeklinde çalıştırın.")
+        sys.exit(1)
+
+
+_lock_fd = None
+
+
+def acquire_lock():
+    """Aynı anda tek mindpkg işlemi (Mind Arc + terminal çakışmasın)"""
+    global _lock_fd
+    if _lock_fd is not None or os.geteuid() != 0:
+        return
+    Path(DB_DIR).mkdir(parents=True, exist_ok=True)
+    _lock_fd = open(LOCK_FILE, "w")
+    try:
+        fcntl.flock(_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print(f"{COLOR_YELLOW}Başka bir mindpkg işlemi sürüyor, bitmesi bekleniyor...{COLOR_RESET}")
+        fcntl.flock(_lock_fd, fcntl.LOCK_EX)
+
+
+PKG_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.+_-]{0,127}$")
+
+
+def valid_pkg_name(name):
+    """Paket adı dosya yolu ya da komut seçeneği olarak kötüye kullanılamasın"""
+    return bool(PKG_NAME_RE.match(name or ""))
+
+
+def require_pkg_name(name):
+    if not valid_pkg_name(name):
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Geçersiz paket adı: {name!r}")
+        sys.exit(1)
+
+
+def safe_member_path(member):
+    """Arşiv üyesini mutlak sistem yoluna çevirir; '..' içeren yolları reddeder"""
+    clean = member.strip()
+    while clean.startswith("./"):
+        clean = clean[2:]
+    clean = clean.lstrip("/")
+    if not clean or clean == ".":
+        return None
+    if any(part == ".." for part in clean.split("/")):
+        raise ValueError(f"güvensiz arşiv yolu: {member}")
+    return "/" + clean.rstrip("/")
+
+
+def validate_files_archive(archive):
+    """files.tar.zst üyelerini denetler, kurulacak mutlak yolları döndürür.
+
+    Reddedilenler: '..' içeren yollar; aygıt dosyaları; paket dışındaki bir dosyaya sabit bağlantı
+    (ör. /etc/shadow); arşivdeki bir sembolik bağlantının *içine* yazılan üyeler (bağlantı /usr/bin'i
+    gösterip ardından 'bağlantı/sudo' yazmak dpkg dosya denetimini atlatıp sistem dosyasının üzerine yazardı)."""
+    import tarfile
+    proc = subprocess.Popen(["zstd", "-dcq", str(archive)], stdout=subprocess.PIPE)
+    paths, links, regular, hardlinks = [], set(), set(), []
+    try:
+        with tarfile.open(fileobj=proc.stdout, mode="r|") as tf:
+            for m in tf:
+                p = safe_member_path(m.name)
+                if not p:
+                    continue
+                if m.ischr() or m.isblk():
+                    raise ValueError(f"aygıt dosyası: {m.name}")
+                if m.islnk():
+                    target = safe_member_path(m.linkname)
+                    hardlinks.append((m.name, target))
+                if m.issym():
+                    links.add(p)
+                elif m.isfile():
+                    regular.add(p)
+                paths.append(p)
+    except tarfile.TarError as e:
+        raise ValueError(f"arşiv okunamadı: {e}")
+    finally:
+        proc.stdout.close()
+        if proc.wait() != 0:
+            raise ValueError("arşiv açılamadı (zstd)")
+    for name, target in hardlinks:
+        if target not in regular:
+            raise ValueError(f"paket dışına sabit bağlantı: {name} -> {target}")
+    for p in paths:
+        parent = p.rsplit("/", 1)[0]
+        while parent:
+            if parent in links:
+                raise ValueError(f"sembolik bağlantı üzerinden yazma: {p}")
+            parent = parent.rsplit("/", 1)[0]
+    return paths
+
+
+# Kaldırırken asla silinmeyecek dizinler
+PROTECTED_PATHS = {"/", "/bin", "/boot", "/dev", "/etc", "/home", "/lib", "/lib64", "/opt", "/proc", "/root",
+                   "/run", "/sbin", "/srv", "/sys", "/tmp", "/usr", "/usr/bin", "/usr/lib", "/usr/lib64",
+                   "/usr/local", "/usr/local/bin", "/usr/sbin", "/usr/share", "/var", "/var/lib"}
+
+
+def calculate_sha256(filepath):
+    h = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        while chunk := f.read(8192):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def run_system_triggers():
+    triggers = [
+        ["ldconfig"],
+        ["update-desktop-database", "-q", "/usr/share/applications"],
+        ["gtk-update-icon-cache", "-q", "-t", "-f", "/usr/share/icons/hicolor"],
+        ["glib-compile-schemas", "/usr/share/glib-2.0/schemas"]
+    ]
+    for cmd in triggers:
+        if shutil.which(cmd[0]):
+            try:
+                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
+
+
+def download_with_progress(url, dest_path):
+    """İlerleme çubuğu ile yerel veya uzak dosyayı kopyalar/indirir"""
+    dest_path = Path(dest_path)
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if url.startswith("file://"):
+        local_src = Path(url.replace("file://", ""))
+        if local_src.exists():
+            shutil.copyfile(local_src, dest_path)
+            return
+        else:
+            raise FileNotFoundError(f"Yerel dosya bulunamadı: {local_src}")
+
+    if not url.startswith("https://"):
+        raise ValueError(f"güvensiz adres reddedildi (yalnızca https:// desteklenir): {url}")
+
+    if shutil.which("curl"):
+        show = ["--progress-bar"] if sys.stdout.isatty() and not dest_path.name.endswith(".part") else ["-sS"]
+        res = subprocess.run(["curl", *show, "-L", "--fail", "--proto", "=https", "--proto-redir", "=https",
+                              "--connect-timeout", "20", "--retry", "3", "--retry-delay", "2",
+                              "-o", str(dest_path), url], check=False)
+        if res.returncode == 0 and dest_path.exists() and dest_path.stat().st_size > 0:
+            return
+
+    req = urllib.request.Request(url, headers={"User-Agent": f"mindpkg/{VERSION} (MindOS)"})
+    with urllib.request.urlopen(req, timeout=60) as response:
+        if not response.geturl().startswith("https://"):
+            raise ValueError(f"güvensiz yönlendirme reddedildi: {response.geturl()}")
+        with open(dest_path, "wb") as f:
+            shutil.copyfileobj(response, f)
+
+
+class IndexSyncing(ValueError):
+    """İndeks ile imzası aynı sürüme ait değil (depo az önce güncellendi, önbellekler eşitleniyor)"""
+
+
+def verify_index(path, sig_path):
+    """<dosya>.sig: {"sha256", "sig"}; imza MindOS sürüm anahtarıyla dosyanın baytları üzerinde"""
+    try:
+        with open(sig_path, encoding="utf-8") as f:
+            meta = json.load(f)
+    except Exception:
+        raise ValueError("imza dosyası okunamadı")
+    if calculate_sha256(path) != str(meta.get("sha256", "")).lower():
+        raise IndexSyncing("depo şu an güncelleniyor, birkaç dakika sonra yeniden deneyin")
+    verify_release_signature(path, str(meta.get("sig", "")))
+
+
+def fetch_signed(url, dest, signed=True):
+    """url'yi dest'e indirir; signed ise url.sig ile doğrular. Başarısızlıkta dest'e dokunulmaz."""
+    tmp, tmp_sig = Path(f"{dest}.part"), Path(f"{dest}.sig.part")
+    try:
+        download_with_progress(url, tmp)
+        with open(tmp, encoding="utf-8") as f:
+            json.load(f)  # bozuk indeksi kabul etme
+        if signed:
+            try:
+                download_with_progress(f"{url}.sig", tmp_sig)
+            except Exception:
+                raise ValueError("indeks imzasız (imza dosyası yok); güvenlik için kabul edilmedi")
+            verify_index(tmp, tmp_sig)
+        os.replace(tmp, dest)
+    finally:
+        tmp.unlink(missing_ok=True)
+        tmp_sig.unlink(missing_ok=True)
+
+
+def update_repos():
+    """Uzak ve yerel MindOS depolarını günceller. İndeksler MindOS sürüm anahtarıyla imzalıdır;
+    imzası doğrulanmayan indeks kabul edilmez, önceki (doğrulanmış) indeks kullanılmaya devam eder.
+    İmzasız bir depo yalnızca mindpkg.conf'ta "signed": false ile bilerek eklenebilir."""
+    check_root()
+    cfg = load_config()
+    repos = cfg.get("repositories", [])
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} MindOS depoları eşitleniyor...")
+    for repo in repos:
+        if not repo.get("enabled", True):
+            continue
+        name = repo["name"]
+        index_url = f"{repo['url']}/packages.json"
+        print(f"  {COLOR_ACCENT}• {name}:{COLOR_RESET} {index_url}")
+        try:
+            fetch_signed(index_url, Path(REPOS_CACHE) / f"{name}.json", repo.get("signed", True))
+            print(f"    {COLOR_GREEN}✓ Başarıyla güncellendi" +
+                  (" (imza doğrulandı)." if repo.get("signed", True) else " (imzasız depo).") + COLOR_RESET)
+        except IndexSyncing as e:
+            print(f"    {COLOR_BANNER}⚠ {e}{COLOR_RESET}")
+        except Exception as e:
+            print(f"    {COLOR_BANNER}⚠ Depo güncellenemedi: {e}{COLOR_RESET}")
+    global _index_cache, _meta_cache
+    _index_cache = None
+    _meta_cache = None
+
+
+# ------------------------------------------------------------------------------
+# Bağımlılıklar
+# ------------------------------------------------------------------------------
+_resolving = set()
+
+
+def dep_alternatives(dep):
+    """'libfoo (>= 1.2) | libbar:any' -> ['libfoo', 'libbar']"""
+    out = []
+    for alt in str(dep).split("|"):
+        name = re.split(r"[\s(\[<>=]", alt.strip(), maxsplit=1)[0].split(":", 1)[0]
+        if name:
+            out.append(name)
+    return out
+
+
+def installed_names():
+    """dpkg'de kurulu paket adları ve sağladıkları sanal paketler + mindpkg kayıtları"""
+    names = {p.stem for p in Path(INSTALLED_DIR).glob("*.json")}
+    if shutil.which("dpkg-query"):
+        out = subprocess.run(["dpkg-query", "-W", "-f=${db:Status-Abbrev}\t${Package}\t${Provides}\n"],
+                             capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            parts = line.split("\t")
+            if len(parts) == 3 and parts[0].startswith("ii"):
+                names.add(parts[1])
+                names.update(dep_alternatives(x)[0] for x in parts[2].split(",") if x.strip())
+    return names
+
+
+def resolve_dependencies(meta):
+    """Paketin eksik bağımlılıklarını kurar (Debian tabanlı sistemde apt, yoksa .mind deposu)"""
+    deps = [d for d in (meta.get("dependencies") or []) if dep_alternatives(d)]
+    if not deps:
+        return
+    if not shutil.which("dpkg-query"):
+        # dpkg'siz sistemlerde (LFS) kurulu kütüphaneler bilinemez; temel kütüphaneleri
+        # (libc6 gibi) üstüne yazmak sistemi bozacağı için yalnızca bilgi verilir
+        print(f"  {COLOR_ACCENT}Bağımlılıklar:{COLOR_RESET} {', '.join(dep_alternatives(d)[0] for d in deps)}")
+        return
+    have = installed_names()
+    missing = [alts for alts in (dep_alternatives(d) for d in deps) if not any(a in have for a in alts)]
+    if not missing:
+        return
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} Eksik bağımlılıklar: {', '.join(m[0] for m in missing)}")
+    via_apt, via_mind = [], []
+    for alts in missing:
+        if shutil.which("apt-get"):
+            apt_update_once()
+            pick = next((a for a in alts if apt_has_candidate(a)), None)
+            if pick:
+                via_apt.append(pick)
+                continue
+        pick = next((a for a in alts if find_in_index(a)), None)
+        if pick:
+            via_mind.append(pick)
+        else:
+            print(f"  {COLOR_YELLOW}⚠ Bulunamadı:{COLOR_RESET} {' | '.join(alts)}")
+    if via_apt:
+        res = subprocess.run(["apt-get", "install", "-y", "-o", "Dpkg::Options::=--force-confdef",
+                              "-o", "Dpkg::Options::=--force-confold", "--", *via_apt],
+                             env={**os.environ, "DEBIAN_FRONTEND": "noninteractive"})
+        if res.returncode != 0:
+            print(f"  {COLOR_YELLOW}⚠ Bazı bağımlılıklar kurulamadı; paket eksik çalışabilir.{COLOR_RESET}")
+    for name in via_mind:
+        if name in _resolving:  # döngüsel bağımlılık
+            continue
+        _resolving.add(name)
+        install_mind_file(fetch_verified(name, find_in_index(name)))
+
+
+# ------------------------------------------------------------------------------
+# Yerel .deb dosyası: .mind paketine dönüştürülüp kurulur (MindOS paket fabrikasıyla aynı yöntem).
+# Debian bağımlılıkları olduğu gibi saklanır, eksikleri resolve_dependencies kurar; Debian kurulum
+# betikleri .mind kancalarına sarılır, hata verirlerse kurulum durmaz.
+# ------------------------------------------------------------------------------
+DEB_MAINTSCRIPTS = {"preinst": ("pre_install.sh", "install"), "postinst": ("post_install.sh", "configure"),
+                    "prerm": ("pre_remove.sh", "remove"), "postrm": ("post_remove.sh", "remove")}
+
+
+def deb_hook_wrapper(pkg_name, script_name, arg, script_bytes):
+    import base64
+    b64 = base64.b64encode(script_bytes).decode()
+    return f"""#!/bin/sh
+# {pkg_name}: Debian {script_name} betiği (mindpkg .deb dönüştürmesi)
+mkdir -p /var/lib/mindpkg/tmp; t=$(mktemp -p /var/lib/mindpkg/tmp) || exit 0
+echo '{b64}' | base64 -d > "$t" && chmod 700 "$t"
+DPKG_MAINTSCRIPT_PACKAGE={pkg_name} DPKG_MAINTSCRIPT_NAME={script_name} DPKG_ROOT= \\
+DEBIAN_FRONTEND=noninteractive "$t" {arg} || echo "  ⚠ {pkg_name}: {script_name} betiği tamamlanamadı" >&2
+rm -f "$t"
+exit 0
+"""
+
+
+def convert_deb_to_mind(deb, outdir):
+    """Bir .deb dosyasını .mind paketine dönüştürür, oluşan dosyanın yolunu döndürür"""
+    if not shutil.which("dpkg-deb"):
+        raise SystemExit(f"{COLOR_RED}Hata:{COLOR_RESET} .deb dönüştürmek için dpkg-deb gerekli.")
+    field = lambda k: subprocess.run(["dpkg-deb", "-f", str(deb), k], capture_output=True, text=True).stdout.strip()
+    name, version, arch = field("Package"), field("Version"), field("Architecture")
+    if not name or not valid_pkg_name(name):
+        raise SystemExit(f"{COLOR_RED}Hata:{COLOR_RESET} {deb} geçerli bir .deb paketi değil.")
+    cur_deb_arch = get_debian_arch()
+    cur_sys_arch = get_system_arch()
+    if arch not in (cur_deb_arch, "all"):
+        raise SystemExit(f"{COLOR_RED}Hata:{COLOR_RESET} {name} bu bilgisayar için değil (mimari: {arch}, gereken: {cur_deb_arch}).")
+    desc = (field("Description").splitlines() or [name])[0]
+    deps = [d.strip() for k in ("Pre-Depends", "Depends") for d in field(k).split(",") if d.strip()]
+    meta = {"name": name, "version": version, "release": "1", "architecture": cur_sys_arch, "description": desc,
+            "maintainer": field("Maintainer") or "?", "dependencies": deps, "origin": "local-deb", "format": 2}
+    out = Path(outdir) / f"{name}-{version.replace(':', '_')}-1-{cur_sys_arch}.mind"
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        root, pkg, ctrl = td / "root", td / "pkg", td / "control"
+        root.mkdir(); pkg.mkdir()
+        subprocess.run(["dpkg-deb", "-x", str(deb), str(root)], check=True)
+        subprocess.run(["dpkg-deb", "-e", str(deb), str(ctrl)], check=True)
+        hooks = []
+        for script, (hook, arg) in DEB_MAINTSCRIPTS.items():
+            if (ctrl / script).exists():
+                (pkg / hook).write_text(deb_hook_wrapper(name, script, arg, (ctrl / script).read_bytes()), encoding="utf-8")
+                (pkg / hook).chmod(0o755)
+                hooks.append(script)
+        meta["maintscripts"] = hooks
+        (pkg / "metadata.json").write_text(json.dumps(meta, indent=4, ensure_ascii=False), encoding="utf-8")
+        subprocess.run(["tar", "--zstd", "-cf", str(pkg / "files.tar.zst"), "--owner=0", "--group=0",
+                        "--numeric-owner", "-C", str(root), "."], check=True)
+        subprocess.run(["tar", "--zstd", "-cf", str(out), "--owner=0", "--group=0", "--numeric-owner",
+                        "-C", str(pkg), "."], check=True)
+    return out
+
+
+def install_deb_file(file_path):
+    """Yerel .deb dosyasını .mind'a dönüştürüp kurar; .mind kopyası önbellekte kalır"""
+    check_root()
+    deb = Path(file_path).resolve()
+    if not deb.is_file():
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Dosya bulunamadı: {deb}")
+        sys.exit(1)
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} .deb paketi .mind biçimine dönüştürülüyor: {COLOR_BOLD}{deb.name}{COLOR_RESET}")
+    Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
+    mind = convert_deb_to_mind(deb, CACHE_DIR)
+    print(f"  {COLOR_GREEN}✓{COLOR_RESET} {mind.name}")
+    install_mind_file(mind)
+
+
+def install_mind_file(file_path):
+    """Yerel bir .mind dosyasını sisteme kurar"""
+    check_root()
+    file_path = Path(file_path).resolve()
+    if not file_path.exists():
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Dosya bulunamadı: {file_path}")
+        sys.exit(1)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        try:
+            subprocess.run(["tar", "--zstd", "-xf", str(file_path), "-C", tmpdir, "--no-same-owner"], check=True)
+        except subprocess.CalledProcessError:
+            print(f"{COLOR_RED}Hata:{COLOR_RESET} {file_path} geçerli bir MindOS paketi değil!")
+            sys.exit(1)
+
+        meta_file = Path(tmpdir) / "metadata.json"
+        if not meta_file.exists():
+            print(f"{COLOR_RED}Hata:{COLOR_RESET} Pakette metadata.json bulunamadı!")
+            sys.exit(1)
+
+        with open(meta_file, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+
+        pkg_name = meta.get("name", "")
+        pkg_ver = meta.get("version", "1.0")
+        if not valid_pkg_name(pkg_name):
+            print(f"{COLOR_RED}Hata:{COLOR_RESET} Paket adı geçersiz: {pkg_name!r}")
+            sys.exit(1)
+
+        _resolving.add(pkg_name)
+        resolve_dependencies(meta)
+        print(f"{COLOR_GREEN}==>{COLOR_RESET} Kuruluyor: {COLOR_BOLD}{pkg_name} ({pkg_ver}){COLOR_RESET} ...")
+
+        # Sistem (dpkg) dosyalarının üzerine yazma kontrolü - kancalardan önce
+        files_archive = Path(tmpdir) / "files.tar.zst"
+        if files_archive.exists():
+            try:
+                paths = validate_files_archive(files_archive)
+            except ValueError as e:
+                print(f"{COLOR_RED}Hata:{COLOR_RESET} Paket reddedildi: {e}")
+                sys.exit(1)
+            conflicts = dpkg_owned_conflicts(paths)
+            if conflicts and os.environ.get("MINDPKG_FORCE") != "1":
+                print(f"{COLOR_RED}Hata:{COLOR_RESET} {pkg_name} sistem paketlerine ait {len(conflicts)} dosyanın üzerine yazacaktı:")
+                for c in conflicts[:8]:
+                    print(f"    {c}")
+                print(f"  Sistemi korumak için kurulum durduruldu. Zorlamak için: {COLOR_BOLD}MINDPKG_FORCE=1 mindpkg install ...{COLOR_RESET}")
+                sys.exit(1)
+
+        # pre_install hook: başarısız olursa kurulum yapılmaz
+        pre_install = Path(tmpdir) / "pre_install.sh"
+        if pre_install.exists():
+            os.chmod(pre_install, 0o755)
+            if subprocess.run([str(pre_install)]).returncode != 0:
+                print(f"{COLOR_RED}Hata:{COLOR_RESET} {pkg_name} kurulum öncesi betiği başarısız oldu, kurulum iptal edildi.")
+                sys.exit(1)
+
+        # Dosyaları çıkart ve listele
+        files_archive = Path(tmpdir) / "files.tar.zst"
+        installed_files = []
+        if files_archive.exists():
+            installed_files = list(paths)
+
+            subprocess.run(["tar", "--zstd", "-xf", str(files_archive), "-C", "/",
+                            "--no-same-owner", "--no-overwrite-dir"], check=True)
+
+        # post_install hook
+        post_install = Path(tmpdir) / "post_install.sh"
+        if post_install.exists():
+            os.chmod(post_install, 0o755)
+            if subprocess.run([str(post_install)]).returncode != 0:
+                print(f"  {COLOR_YELLOW}⚠ Kurulum sonrası betiği hata verdi.{COLOR_RESET}")
+
+        # kaldırma kancaları saklanır; 'mindpkg remove' bunları çalıştırır
+        hook_dir = Path(HOOKS_DIR) / pkg_name
+        shutil.rmtree(hook_dir, ignore_errors=True)
+        for hook in ("pre_remove.sh", "post_remove.sh"):
+            if (Path(tmpdir) / hook).exists():
+                hook_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(Path(tmpdir) / hook, hook_dir / hook)
+                os.chmod(hook_dir / hook, 0o755)
+
+        # Veritabanına kaydet
+        meta["installed_files"] = installed_files
+        pkg_record = Path(INSTALLED_DIR) / f"{pkg_name}.json"
+        with open(pkg_record, "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=4)
+
+        run_system_triggers()
+        print(f"{COLOR_GREEN}✓ Tamamlandı:{COLOR_RESET} {pkg_name} ({pkg_ver}) sisteme kuruldu.")
+
+
+# Üçüncü taraf uygulamalar: üreticinin resmi, imzalı apt deposundan kurulur
+# Üretici (kapalı kaynak) uygulamaları: kendi resmi depolarından kurulur, depo anahtarının parmak izi
+# sabittir; anahtar değişmişse depo eklenmez. Paket dosyaları MindOS deposunda dağıtılmaz (lisansları izin vermez).
+def get_vendor_apps():
+    deb_arch = get_debian_arch()
+    apps = {
+        "google-chrome-stable": {
+            "aliases": ["chrome", "google-chrome"],
+            "source": f"deb [arch={deb_arch} signed-by=/usr/share/keyrings/google-chrome.asc] https://dl.google.com/linux/chrome/deb/ stable main",
+            "list": "/etc/apt/sources.list.d/google-chrome.list",
+            "key_url": "https://dl.google.com/linux/linux_signing_key.pub",
+            "keyring": "/usr/share/keyrings/google-chrome.asc",
+            "fingerprint": "EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796",
+            "match": "dl.google.com/linux/chrome",   # chrome/deb ve chrome-stable/deb aynı depo
+            "arm64_fallback": "chromium",
+        },
+        "code": {
+            "aliases": ["vscode", "visual-studio-code"],
+            "source": f"deb [arch={deb_arch} signed-by=/usr/share/keyrings/microsoft.asc] https://packages.microsoft.com/repos/code stable main",
+            "list": "/etc/apt/sources.list.d/vscode.list",
+            "key_url": "https://packages.microsoft.com/keys/microsoft.asc",
+            "keyring": "/usr/share/keyrings/microsoft.asc",
+            "fingerprint": "BC528686B50D79E339D3721CEB3E94ADBE1229CF",
+        },
+        "microsoft-edge-stable": {
+            "aliases": ["edge", "microsoft-edge"],
+            "source": f"deb [arch={deb_arch} signed-by=/usr/share/keyrings/microsoft.asc] https://packages.microsoft.com/repos/edge stable main",
+            "list": "/etc/apt/sources.list.d/microsoft-edge.list",
+            "key_url": "https://packages.microsoft.com/keys/microsoft.asc",
+            "keyring": "/usr/share/keyrings/microsoft.asc",
+            "fingerprint": "BC528686B50D79E339D3721CEB3E94ADBE1229CF",
+        },
+        "brave-browser": {
+            "aliases": ["brave"],
+            "source": f"deb [arch={deb_arch} signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main",
+            "list": "/etc/apt/sources.list.d/brave-browser-release.list",
+            "key_url": "https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg",
+            "keyring": "/usr/share/keyrings/brave-browser-archive-keyring.gpg",
+            "fingerprint": "DBF1A116C220B8C7164F98230686B78420038257",
+        },
+        "vivaldi-stable": {
+            "aliases": ["vivaldi"],
+            "source": f"deb [arch={deb_arch} signed-by=/usr/share/keyrings/vivaldi.gpg] https://repo.vivaldi.com/archive/deb/ stable main",
+            "list": "/etc/apt/sources.list.d/vivaldi.list",
+            "key_url": "https://repo.vivaldi.com/archive/linux_signing_key.pub",
+            "keyring": "/usr/share/keyrings/vivaldi.gpg",
+            "fingerprint": "8D1FA52AEF58A09D889DD4221256C34716BD9233",
+        },
+        "opera-stable": {
+            "aliases": ["opera"],
+            "source": f"deb [arch={deb_arch} signed-by=/usr/share/keyrings/opera.gpg] https://deb.opera.com/opera-stable/ stable non-free",
+            "list": "/etc/apt/sources.list.d/opera-stable.list",
+            "key_url": "https://deb.opera.com/archive.key",
+            "keyring": "/usr/share/keyrings/opera.gpg",
+            "fingerprint": "6C86BE214648376680CA957B11EE8C00B693A745",
+        },
+        "anydesk": {
+            "aliases": ["any-desk"],
+            "source": "deb [signed-by=/usr/share/keyrings/anydesk.gpg] https://deb.anydesk.com all main",
+            "list": "/etc/apt/sources.list.d/anydesk-stable.list",
+            "key_url": "https://keys.anydesk.com/repos/DEB-GPG-KEY",
+            "keyring": "/usr/share/keyrings/anydesk.gpg",
+            "fingerprint": "06B5EA2FAE208E7CDA9761DCA2FB21D5A8772835",
+        },
+        "signal-desktop": {
+            "aliases": ["signal"],
+            "source": f"deb [arch={deb_arch} signed-by=/usr/share/keyrings/signal-desktop-keyring.gpg] https://updates.signal.org/desktop/apt xenial main",
+            "list": "/etc/apt/sources.list.d/signal-xenial.list",
+            "key_url": "https://updates.signal.org/desktop/apt/keys.asc",
+            "keyring": "/usr/share/keyrings/signal-desktop-keyring.gpg",
+            "fingerprint": "DBA36B5181D0C816F630E889D980A17457F6FB06",
+        },
+        "sublime-text": {
+            "aliases": ["sublime", "subl"],
+            "source": "deb [signed-by=/usr/share/keyrings/sublimehq.gpg] https://download.sublimetext.com/ apt/stable/",
+            "list": "/etc/apt/sources.list.d/sublime-text.list",
+            "key_url": "https://download.sublimetext.com/sublimehq-pub.gpg",
+            "keyring": "/usr/share/keyrings/sublimehq.gpg",
+            "fingerprint": "1EDDE2CDFC025D17F6DA9EC0ADAE6AD28A8F901A",
+        },
+        "1password": {
+            "aliases": ["onepassword", "1-password"],
+            "source": f"deb [arch={deb_arch} signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/{deb_arch} stable main",
+            "list": "/etc/apt/sources.list.d/1password.list",
+            "key_url": "https://downloads.1password.com/linux/keys/1password.asc",
+            "keyring": "/usr/share/keyrings/1password-archive-keyring.gpg",
+            "fingerprint": "3FEF9748469ADBE15DA7CA80AC2D62742012EA22",
+        },
+        "docker-ce": {
+            "aliases": ["docker", "docker-engine"],
+            "source": f"deb [arch={deb_arch} signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/debian trixie stable",
+            "list": "/etc/apt/sources.list.d/docker.list",
+            "key_url": "https://download.docker.com/linux/debian/gpg",
+            "keyring": "/usr/share/keyrings/docker.gpg",
+            "fingerprint": "9DC858229FC7DD38854AE2D88D81803C0EBFCD88",
+            "packages": ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"],
+        },
+    }
+    if deb_arch == "amd64":
+        apps["steam-launcher"] = {
+            "aliases": ["steam", "steam-installer", "valve-steam"],
+            "source": "deb [arch=amd64,i386 signed-by=/usr/share/keyrings/steam.gpg] https://repo.steampowered.com/steam/ stable steam\n"
+                      "deb-src [arch=amd64,i386 signed-by=/usr/share/keyrings/steam.gpg] https://repo.steampowered.com/steam/ stable steam",
+            "list": "/etc/apt/sources.list.d/steam-stable.list",
+            "key_url": "https://repo.steampowered.com/steam/archive/stable/steam.gpg",
+            "fingerprint": "BA1816EF8E75005FCF5E27A1F24AEA9FB05498B7",
+            "keyring": "/usr/share/keyrings/steam.gpg",
+            "foreign_arch": "i386",
+            "packages": ["steam-launcher", "steam-libs-amd64", "steam-libs-i386:i386"],
+        }
+    return apps
+
+
+VENDOR_APPS = get_vendor_apps()
+_apt_updated = False
+
+# Debian deposunda adı farklı olan paketler
+APT_ALIASES = {
+    "firefox": "firefox-esr",
+}
+
+
+def resolve_vendor_app(name):
+    """Takma adı (chrome, vscode ...) gerçek paket adına çevirir"""
+    for pkg, spec in VENDOR_APPS.items():
+        if name == pkg or name in spec["aliases"]:
+            return pkg, spec
+    return None, None
+
+
+def apt_repo_configured(url):
+    """Bu adres zaten bir apt kaynağında tanımlı mı (aynı depo iki kez farklı anahtarla eklenirse apt hata verir)"""
+    url = url.split("://", 1)[-1].rstrip("/")
+    files = [Path("/etc/apt/sources.list"), *Path("/etc/apt/sources.list.d").glob("*")]
+    for f in files:
+        try:
+            if url in f.read_text(encoding="utf-8", errors="replace"):
+                return True
+        except OSError:
+            pass
+    return False
+
+
+def fetch_vendor_key(spec):
+    """Üretici anahtarını indirir; parmak izi tablodakiyle tutmazsa reddeder. .gpg yolları ikili biçimde saklanır."""
+    with tempfile.TemporaryDirectory() as td:
+        raw = Path(td) / "key"
+        download_with_progress(spec["key_url"], raw)
+        shown = subprocess.run(["gpg", "--batch", "--with-colons", "--show-keys", str(raw)],
+                               capture_output=True, text=True).stdout
+        fprs = [l.split(":")[9] for l in shown.splitlines() if l.startswith("fpr:")]
+        if spec.get("fingerprint") and spec["fingerprint"] not in fprs:
+            raise SystemExit(f"{COLOR_RED}Hata:{COLOR_RESET} {spec['key_url']} anahtarının parmak izi beklenenle uyuşmuyor; depo eklenmedi.")
+        data = raw.read_bytes()
+        Path(spec["keyring"]).parent.mkdir(parents=True, exist_ok=True)
+        if spec["keyring"].endswith(".gpg") and data.lstrip().startswith(b"-----BEGIN"):
+            subprocess.run(["gpg", "--batch", "--yes", "--dearmor", "-o", spec["keyring"], str(raw)], check=True)
+        else:
+            Path(spec["keyring"]).write_bytes(data)
+    os.chmod(spec["keyring"], 0o644)
+
+
+def apt_update_once():
+    global _apt_updated
+    if not _apt_updated:
+        print(f"  {COLOR_ACCENT}Sistem paket listeleri güncelleniyor...{COLOR_RESET}")
+        subprocess.run(["apt-get", "update", "-qq"], check=False)
+        _apt_updated = True
+
+
+def apt_has_candidate(pkg):
+    out = subprocess.run(["apt-cache", "policy", pkg], capture_output=True, text=True,
+                         env={**os.environ, "LANG": "C"}).stdout
+    for line in out.splitlines():
+        if line.strip().startswith("Candidate:"):
+            return line.split(":", 1)[1].strip() not in ("", "(none)")
+    return False
+
+
+# ------------------------------------------------------------------------------
+# Flathub: mindpkg deposunda ve Debian'da olmayan masaüstü uygulamaları (Discord, Spotify, Zoom ...).
+# Sık yazılan adlar Flathub kimliğine eşlenir; bazı adlar Debian'da bambaşka bir pakete denk geldiği
+# için (zoom: metin oyunu yorumlayıcısı, slack: yapılandırma aracı) bu eşleme Debian'dan önce bakılır.
+# ------------------------------------------------------------------------------
+FLATHUB_URL = "https://dl.flathub.org/repo/flathub.flatpakrepo"
+FLATPAK_APPS = {
+    "com.discordapp.Discord": ["discord"],
+    "dev.vencord.Vesktop": ["vesktop"],
+    "io.github.spacingbat3.webcord": ["webcord"],
+    "com.spotify.Client": ["spotify", "spotify-client"],
+    "us.zoom.Zoom": ["zoom", "zoom-client"],
+    "com.slack.Slack": ["slack", "slack-desktop"],
+    "org.telegram.desktop": ["telegram"],
+    "com.rtosta.zapzap": ["whatsapp", "zapzap"],
+    "com.github.IsmaelMartinez.teams_for_linux": ["teams", "microsoft-teams"],
+    "md.obsidian.Obsidian": ["obsidian"],
+    "com.getpostman.Postman": ["postman"],
+    "com.mojang.Minecraft": ["minecraft", "minecraft-launcher"],
+    "org.prismlauncher.PrismLauncher": ["prismlauncher", "prism-launcher"],
+    "org.vinegarhq.Sober": ["sober", "roblox"],
+    "com.heroicgameslauncher.hgl": ["heroic", "heroic-games-launcher", "epic-games"],
+    "net.lutris.Lutris": ["lutris"],
+    "com.usebottles.bottles": ["bottles"],
+    "net.davidotek.pupgui2": ["protonup-qt", "protonup"],
+    "com.github.tchx84.Flatseal": ["flatseal"],
+    "app.zen_browser.zen": ["zen", "zen-browser"],
+    "org.onlyoffice.desktopeditors": ["onlyoffice"],
+    "com.jetbrains.IntelliJ-IDEA-Community": ["intellij", "intellij-idea"],
+    "com.jetbrains.PyCharm-Community": ["pycharm"],
+    "com.google.AndroidStudio": ["android-studio"],
+    "io.github.shiftey.Desktop": ["github-desktop"],
+    "com.protonvpn.www": ["protonvpn"],
+    "com.parsecgaming.parsec": ["parsec"],
+    "tv.plex.PlexDesktop": ["plex"],
+    "com.stremio.Stremio": ["stremio"],
+    "io.missioncenter.MissionCenter": ["mission-center", "missioncenter"],
+}
+
+
+def flatpak_alias(name):
+    n = name.lower()
+    for app_id, aliases in FLATPAK_APPS.items():
+        if n == app_id.lower() or n in aliases:
+            return app_id
+    return None
+
+
+def flatpak_ready(update_appstream=False):
+    """flatpak kurulu ve Flathub ekli olsun (sistem geneli)"""
+    if not shutil.which("flatpak"):
+        if not shutil.which("apt-get"):
+            return False
+        print(f"{COLOR_GREEN}==>{COLOR_RESET} Flatpak kuruluyor...")
+        apt_update_once()
+        if subprocess.run(["apt-get", "install", "-y", "-q", "flatpak"],
+                          env={**os.environ, "DEBIAN_FRONTEND": "noninteractive"}).returncode != 0:
+            return False
+    subprocess.run(["flatpak", "remote-add", "--if-not-exists", "--system", "flathub", FLATHUB_URL],
+                   capture_output=True)
+    if update_appstream:
+        subprocess.run(["flatpak", "update", "--appstream", "--system", "-y", "flathub"], capture_output=True)
+    return True
+
+
+def flatpak_search(query, limit=10):
+    """Flathub'da arar: [(kimlik, ad, açıklama)]"""
+    if not shutil.which("flatpak"):
+        return []
+    out = subprocess.run(["flatpak", "search", "--columns=application,name,description", query],
+                         capture_output=True, text=True, env={**os.environ, "LC_ALL": "C.UTF-8"}).stdout
+    rows = []
+    for line in out.splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 2 and "." in parts[0]:
+            rows.append((parts[0].strip(), parts[1].strip(), parts[2].strip() if len(parts) > 2 else ""))
+    return rows[:limit]
+
+
+def flathub_exact(name):
+    """Adı tam eşleşen Flathub uygulaması (kimliğin son parçası ya da görünen ad)"""
+    n = name.lower().replace(" ", "-")
+    for app_id, title, _ in flatpak_search(name, limit=50):
+        if app_id.lower() == n or app_id.rsplit(".", 1)[-1].lower() == n or title.lower().replace(" ", "-") == n:
+            return app_id
+    return None
+
+
+def install_flatpak(app_id):
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} Flathub'dan kuruluyor: {COLOR_BOLD}{app_id}{COLOR_RESET} ...")
+    res = subprocess.run(["flatpak", "install", "-y", "--noninteractive", "--system", "flathub", app_id])
+    if res.returncode != 0:
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} {app_id} Flathub'dan kurulamadı (flatpak çıkış kodu {res.returncode}).")
+        sys.exit(res.returncode)
+    print(f"{COLOR_GREEN}✓ Tamamlandı:{COLOR_RESET} {app_id} kuruldu (uygulama menüsünde).")
+
+
+def flatpak_installed_id(name):
+    """Kurulu Flatpak uygulamaları arasında adı/kimliği eşleşen"""
+    if not shutil.which("flatpak"):
+        return None
+    out = subprocess.run(["flatpak", "list", "--app", "--columns=application"], capture_output=True, text=True).stdout.split()
+    cand = flatpak_alias(name) or name
+    for app_id in out:
+        if app_id.lower() == cand.lower() or app_id.rsplit(".", 1)[-1].lower() == name.lower():
+            return app_id
+    return None
+
+
+def install_from_system(name):
+    """mindpkg deposunda olmayan paketi üretici deposu veya Debian deposundan kurar"""
+    if not shutil.which("apt-get"):
+        return False
+    if name in ("steam", "steam-launcher") and get_system_arch() == "aarch64":
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Steam resmi Linux istemcisi yalnızca x86_64 mimarisini destekler.")
+        print("ARM64 sistemlerde x86_64 emülasyonu (FEX-Emu veya Box64) gereklidir.")
+        sys.exit(1)
+    pkg, spec = resolve_vendor_app(name)
+    packages = [pkg]
+    if spec:
+        if spec.get("arm64_fallback") and get_debian_arch() == "arm64":
+            fallback = spec["arm64_fallback"]
+            print(f"{COLOR_YELLOW}Bilgi:{COLOR_RESET} {pkg} için resmi ARM64 Linux paketi bulunmuyor; {COLOR_BOLD}{fallback}{COLOR_RESET} kuruluyor.")
+            pkg = fallback
+            packages = [pkg]
+            spec = None
+        else:
+            arch = spec.get("foreign_arch")
+            if arch and arch not in subprocess.run(["dpkg", "--print-foreign-architectures"],
+                                                    capture_output=True, text=True).stdout.split():
+                print(f"{COLOR_GREEN}==>{COLOR_RESET} {arch} (32 bit) mimarisi etkinleştiriliyor...")
+                subprocess.run(["dpkg", "--add-architecture", arch], check=True)
+            packages = spec.get("packages", [pkg])
+            url = spec["source"].split("\n")[0].split("]")[-1].split()[0]
+            if not apt_repo_configured(spec.get("match", url)):
+                print(f"{COLOR_GREEN}==>{COLOR_RESET} Resmi üretici deposu ekleniyor: {COLOR_BOLD}{url}{COLOR_RESET}")
+                if not Path(spec["keyring"]).exists():
+                    fetch_vendor_key(spec)
+                Path(spec["list"]).write_text(spec["source"] + "\n", encoding="utf-8")
+            global _apt_updated
+            _apt_updated = False
+    else:
+        pkg = APT_ALIASES.get(name, name)
+        packages = [pkg]
+    apt_update_once()
+    if not apt_has_candidate(pkg):
+        return False
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} Sistem deposundan kuruluyor: {COLOR_BOLD}{pkg}{COLOR_RESET} ...")
+    res = subprocess.run(["apt-get", "install", "-y", "-o", "Dpkg::Options::=--force-confdef",
+                          "-o", "Dpkg::Options::=--force-confold", "--", *packages],
+                         env={**os.environ, "DEBIAN_FRONTEND": "noninteractive"})
+    if res.returncode != 0:
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} '{pkg}' kurulamadı (apt-get çıkış kodu {res.returncode}).")
+        sys.exit(res.returncode)
+    run_system_triggers()
+    print(f"{COLOR_GREEN}✓ Tamamlandı:{COLOR_RESET} {pkg} sisteme kuruldu.")
+    return True
+
+
+# ------------------------------------------------------------------------------
+# NVIDIA sürücüsü (mindpkg install nvidia)
+#   Turing ve sonrası (GTX 16xx, RTX): MindOS kernel'i + NVIDIA'nın resmi Debian deposundaki
+#     en yeni sürücü (nvidia-open, DKMS). Debian'ın 550 sürücüsü MindOS 7.x kernel'inde derlenmiyor.
+#   Maxwell / Pascal / Volta (GTX 750-1080, 9xxM, 10xxM): NVIDIA 590+ bu kartları desteklemiyor;
+#     Debian'ın 6.12 LTS kernel'i ve Debian'ın NVIDIA 550 sürücüsü kurulur, MindOS kernel'i bu
+#     bilgisayarda kullanılmaz (/etc/mindos/kernel = debian).
+#   Kepler ve öncesi: güncel sürücüsü yok; açık kaynak nouveau kullanılır.
+# ------------------------------------------------------------------------------
+def get_nvidia_repo():
+    n_arch = "sbsa" if get_system_arch() == "aarch64" else "x86_64"
+    return {
+        "list": f"/etc/apt/sources.list.d/cuda-debian13-{n_arch}.list",  # cuda-keyring paketiyle aynı yollar
+        "keyring": "/usr/share/keyrings/cuda-archive-keyring.gpg",
+        "source": f"deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] "
+                  f"https://developer.download.nvidia.com/compute/cuda/repos/debian13/{n_arch}/ /",
+        "key_url": f"https://developer.download.nvidia.com/compute/cuda/repos/debian13/{n_arch}/8793F200.pub",
+        "fingerprint": "02182E60104FCDC26EAE1B8597A5D4CB8793F200",
+    }
+
+
+NVIDIA_REPO = get_nvidia_repo()
+KERNEL_FLAVOR_FILE = "/etc/mindos/kernel"
+# Yeni donanımın (RTX 50, yeni AMD/Intel ekran kartları, Wi-Fi) yazılım dosyaları trixie'ye gelmez, Debian'ın
+# backports'unda güncellenir. Backports'tan yalnızca firmware-* paketleri otomatik alınır, gerisi trixie'de kalır.
+FIRMWARE_BACKPORTS = {
+    "/etc/apt/sources.list.d/mindos-backports.sources": """# MindOS: Debian backports (yalnızca donanım yazılımı otomatik; bkz. /etc/apt/preferences.d/mindos-firmware)
+Types: deb
+URIs: http://deb.debian.org/debian
+Suites: trixie-backports
+Components: main non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+""",
+    "/etc/apt/preferences.d/mindos-firmware": """# MindOS: backports'tan yalnızca donanım yazılımı (firmware-*) paketleri yükseltilir
+Package: *
+Pin: release n=trixie-backports
+Pin-Priority: 100
+
+Package: firmware-*
+Pin: release n=trixie-backports
+Pin-Priority: 500
+""",
+}
+
+
+def ensure_firmware_backports():
+    """Backports kaynağını ve yalnızca firmware-* için önceliği ekler; değiştiyse True"""
+    changed = False
+    for path, text in FIRMWARE_BACKPORTS.items():
+        p = Path(path)
+        try:
+            if p.read_text(encoding="utf-8") == text:
+                continue
+        except OSError:
+            pass
+        if not Path("/usr/share/keyrings/debian-archive-keyring.gpg").exists():
+            return False
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+        os.chmod(p, 0o644)
+        changed = True
+    return changed
+
+
+def kernel_flavor():
+    try:
+        return Path(KERNEL_FLAVOR_FILE).read_text(encoding="utf-8").strip() or "mindos"
+    except OSError:
+        return "mindos"
+
+
+def nvidia_gpus():
+    """[(pci_device_id, açıklama)] — yalnızca ekran denetleyicisi sınıfındaki NVIDIA aygıtları"""
+    out = subprocess.run(["lspci", "-nn", "-d", "10de:"], capture_output=True, text=True).stdout
+    gpus = []
+    for line in out.splitlines():
+        if not re.search(r"\[030[02]\]", line):
+            continue
+        m = re.search(r"\[10de:([0-9a-f]{4})\]", line)
+        if m:
+            gpus.append((int(m.group(1), 16), line.split(": ", 1)[-1]))
+    return gpus
+
+
+def nvidia_generation(device_id):
+    """PCI aygıt numarasından kuşak: 'modern' (Turing+), 'legacy' (Maxwell-Volta), 'old' (Kepler-)"""
+    if device_id >= 0x1E00:
+        return "modern"
+    if device_id >= 0x1340:
+        return "legacy"
+    return "old"
+
+
+def ensure_debian_nonfree():
+    """NVIDIA sürücüsü Debian'ın contrib/non-free bileşenlerinde"""
+    changed = False
+    for path in [Path("/etc/apt/sources.list"), *Path("/etc/apt/sources.list.d").glob("*.list")]:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        new = re.sub(r"^(deb\s+\S+debian\S*\s+\S+)\s+main(?:\s+non-free-firmware)?\s*$",
+                     r"\1 main contrib non-free non-free-firmware", text, flags=re.M)
+        if new != text:
+            path.write_text(new, encoding="utf-8")
+            changed = True
+    return changed
+
+
+def add_nvidia_repo():
+    if Path(NVIDIA_REPO["keyring"]).exists() and Path(NVIDIA_REPO["list"]).exists():
+        return
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} NVIDIA'nın resmi Debian deposu ekleniyor...")
+    with tempfile.TemporaryDirectory() as td:
+        pub = Path(td) / "nvidia.pub"
+        download_with_progress(NVIDIA_REPO["key_url"], pub)
+        shown = subprocess.run(["gpg", "--batch", "--with-colons", "--show-keys", str(pub)],
+                               capture_output=True, text=True).stdout
+        fprs = [l.split(":")[9] for l in shown.splitlines() if l.startswith("fpr:")]
+        if NVIDIA_REPO["fingerprint"] not in fprs:
+            raise ValueError("NVIDIA depo anahtarının parmak izi beklenenle uyuşmuyor; eklenmedi")
+        subprocess.run(["gpg", "--batch", "--yes", "--dearmor", "-o", NVIDIA_REPO["keyring"], str(pub)], check=True)
+    os.chmod(NVIDIA_REPO["keyring"], 0o644)
+    Path(NVIDIA_REPO["list"]).write_text(NVIDIA_REPO["source"] + "\n", encoding="utf-8")
+
+
+def secure_boot_enabled():
+    r = subprocess.run(["mokutil", "--sb-state"], capture_output=True, text=True)
+    return "SecureBoot enabled" in r.stdout
+
+
+def queue_dkms_key_enrollment():
+    """Secure Boot açıkken DKMS'in imzaladığı NVIDIA modülü, DKMS anahtarı onaylanana dek yüklenmez.
+    Anahtar bir sonraki açılışta onaylanmak üzere sıraya alınır; kullanıcıya tek kullanımlık kod gösterilir."""
+    pub = Path("/var/lib/dkms/mok.pub")
+    if not (secure_boot_enabled() and pub.exists() and shutil.which("mokutil")):
+        return None
+    if "is already enrolled" in subprocess.run(["mokutil", "--test-key", str(pub)],
+                                               capture_output=True, text=True).stdout:
+        return None
+    import secrets
+    code = f"{secrets.randbelow(10 ** 6):06d}"
+    with tempfile.TemporaryDirectory() as td:
+        h = Path(td) / "hash"
+        h.write_text(subprocess.run(["mokutil", f"--generate-hash={code}"], capture_output=True,
+                                    text=True, check=True).stdout)
+        subprocess.run(["mokutil", "--import", str(pub), "--hash-file", str(h)], check=True)
+    return code
+
+
+def install_nvidia():
+    check_root()
+    if not (shutil.which("apt-get") and is_mindos_paradise()):
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} NVIDIA kurulumu yalnızca MindOS Paradise'ta desteklenir.")
+        sys.exit(1)
+    if is_live_session():
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Canlı oturumda sürücü kurulamaz; önce MindOS'u diske kurun.")
+        sys.exit(1)
+    gpus = nvidia_gpus()
+    if not gpus:
+        print(f"{COLOR_YELLOW}Bu bilgisayarda NVIDIA ekran kartı bulunamadı.{COLOR_RESET}")
+        return
+    gens = {nvidia_generation(d) for d, _ in gpus}
+    for _, desc in gpus:
+        print(f"  • {desc}")
+    if gens == {"old"}:
+        print(f"{COLOR_YELLOW}Bu kart için güncel NVIDIA sürücüsü yok (Kepler ve öncesi). MindOS açık kaynak "
+              f"'nouveau' sürücüsünü kullanıyor; ekran ve masaüstü bununla çalışır.{COLOR_RESET}")
+        return
+    env = {**os.environ, **APT_ENV}
+    ensure_firmware_backports()  # RTX 50 (Blackwell) GSP dosyaları yalnızca backports'ta
+    if "modern" in gens:
+        print(f"{COLOR_GREEN}==>{COLOR_RESET} Yeni nesil NVIDIA kartı: MindOS kernel'i + NVIDIA'nın en yeni sürücüsü")
+        install_system_component("linux-headers")
+        add_nvidia_repo()
+        subprocess.run(["apt-get", "update", "-qq"], env=env, check=False)
+        res = subprocess.run(["apt-get", "install", "-y", *APT_OPTS, "nvidia-open"], env=env)
+    else:
+        print(f"{COLOR_GREEN}==>{COLOR_RESET} Bu kart (GTX 900/1000 kuşağı) için NVIDIA 550 gerekiyor; o da "
+              f"Debian'ın 6.12 LTS kernel'iyle çalışıyor. Bu bilgisayar Debian kernel'ine geçirilecek.")
+        ensure_debian_nonfree()
+        subprocess.run(["apt-get", "update", "-qq"], env=env, check=False)
+        deb_arch = get_debian_arch()
+        res = subprocess.run(["apt-get", "install", "-y", *APT_OPTS, f"linux-image-{deb_arch}", f"linux-headers-{deb_arch}"],
+                             env=env)
+        if res.returncode == 0:
+            # 550 MindOS kernel'inde derlenmez; MindOS başlıkları kalırsa DKMS hata verip kurulumu durdurur
+            headers = subprocess.run(["dpkg-query", "-W", "-f=${Package}\\n", "linux-headers-*-mindos"],
+                                     capture_output=True, text=True).stdout.split()
+            if headers:
+                subprocess.run(["apt-get", "purge", "-y", *APT_OPTS, *headers], env=env)
+            res = subprocess.run(["apt-get", "install", "-y", *APT_OPTS, "nvidia-driver", "firmware-misc-nonfree"],
+                                 env=env)
+        if res.returncode == 0:
+            Path(KERNEL_FLAVOR_FILE).parent.mkdir(parents=True, exist_ok=True)
+            Path(KERNEL_FLAVOR_FILE).write_text("debian\n", encoding="utf-8")
+            images = subprocess.run(["dpkg-query", "-W", "-f=${Package}\\n", "linux-image-*-mindos"],
+                                    capture_output=True, text=True).stdout.split()
+            if images:  # GRUB en yüksek sürümlü kernel'i seçer; MindOS kernel'i kalırsa NVIDIA'sız açılır
+                subprocess.run(["apt-get", "purge", "-y", *APT_OPTS, *images], env=env)
+    if res.returncode != 0:
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} NVIDIA sürücüsü kurulamadı (apt-get çıkış kodu {res.returncode}).")
+        sys.exit(1)
+    code = queue_dkms_key_enrollment()
+    print(f"\n{COLOR_GREEN}✓ NVIDIA sürücüsü kuruldu.{COLOR_RESET} Etkinleşmesi için bilgisayarı yeniden başlatın.")
+    if code:
+        print(f"\n{COLOR_BOLD}Secure Boot açık:{COLOR_RESET} yeniden başlarken mavi bir ekran (MOK Manager) gelecek.\n"
+              f"  'Enroll MOK' → 'Continue' → 'Yes' seçin ve şu kodu girin: {COLOR_BOLD}{code}{COLOR_RESET}\n"
+              f"  Ardından 'Reboot'. Bu bir kez yapılır; NVIDIA modülünün imzası böylece tanınır.")
+
+
+# ------------------------------------------------------------------------------
+# Broadcom Wi-Fi (mindpkg install broadcom)
+#   Kernel'in kendi sürücüsü (brcmfmac, brcmsmac, b43, bcma) kartı çalıştırıyorsa hiçbir şey yapılmaz.
+#   Çalıştırmıyorsa Broadcom'un "wl" sürücüsü kurulur: Debian'ın broadcom-sta-dkms paketi kernel 7.x
+#   için yamalanıp MindOS sistem bileşeni olarak yayınlanır (Debian'ınki 7.x'te derlenmiyor).
+# ------------------------------------------------------------------------------
+BROADCOM_GRUB = "/etc/default/grub.d/mindos-broadcom-wl.cfg"
+
+
+def broadcom_wifi():
+    """[(aygıt satırı, kullanılan sürücü|None)] Broadcom ağ denetleyicileri"""
+    out = subprocess.run(["lspci", "-nnk", "-d", "14e4:"], capture_output=True, text=True).stdout
+    cards, cur = [], None
+    for line in out.splitlines():
+        if not line.startswith(("\t", " ")):
+            cur = [line, None] if re.search(r"\[028[0-9]\]", line) else None
+            if cur:
+                cards.append(cur)
+        elif cur and "Kernel driver in use:" in line:
+            cur[1] = line.split(":", 1)[1].strip()
+    return [tuple(c) for c in cards]
+
+
+BROADCOM_LOG = "/var/log/mindos-broadcom.log"
+
+
+def ensure_broadcom_module():
+    """wl.ko çalışan kernel için derlenmiş ve kurulmuş olmalı. Yoksa DKMS derlemesini baştan yapar;
+    olmazsa nedenini ekrana ve /var/log/mindos-broadcom.log dosyasına yazar. True: modül hazır."""
+    rel = os.environ.get("MINDPKG_KERNEL") or os.uname().release
+
+    def have():
+        return subprocess.run(["modinfo", "-k", rel, "wl"], capture_output=True).returncode == 0
+
+    if have():
+        return True
+    print(f"{COLOR_YELLOW}wl modülü {rel} için henüz yok; derleniyor...{COLOR_RESET}")
+    log = [f"kernel: {rel}\n"]
+    env = {**os.environ, **APT_ENV}
+    def run(cmd, **kw):
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, **kw)
+            return r.returncode, r.stdout + r.stderr
+        except OSError as e:  # komut yok (ör. dkms henüz kurulu değil)
+            return 127, f"{cmd[0]}: {e}\n"
+
+    # Paket "açılmış ama yapılandırılmamış" yarım durumdaysa (bağımlılık kurulamadığında) apt başka paket
+    # kurmayı reddeder; önce yarım kalan kurulum tamamlanır, sonra derleme araçları kesin kurulur
+    for cmd in (["dpkg", "--configure", "-a"], ["apt-get", "install", "-f", "-y", *APT_OPTS],
+                ["apt-get", "install", "-y", *APT_OPTS, "dkms", "build-essential"]):
+        rc, out = run(cmd, env=env)
+        log.append(f"== {' '.join(cmd[:3])} (çıkış {rc})\n{out[-1500:]}")
+    srcs = sorted(Path("/usr/src").glob("broadcom-sta-*"))
+    ver = srcs[-1].name.split("broadcom-sta-", 1)[1] if srcs else None
+    if not ver:
+        log.append("HATA: /usr/src/broadcom-sta-* yok (paket kurulmamış)\n")
+    elif not Path(f"/lib/modules/{rel}/build").exists():
+        log.append(f"HATA: /lib/modules/{rel}/build yok (kernel başlıkları kurulu değil)\n")
+    else:
+        run(["dkms", "add", f"broadcom-sta/{ver}"])  # kayıtlıysa zararsız
+        rc, out = run(["dkms", "install", f"broadcom-sta/{ver}", "-k", rel, "--force"])
+        log.append(f"== dkms install (çıkış {rc})\n{out[-3000:]}")
+        mk = Path(f"/var/lib/dkms/broadcom-sta/{ver}/build/make.log")
+        if rc != 0 and mk.exists():
+            tail = "".join(mk.read_text(errors="replace").splitlines(keepends=True)[-40:])
+            log.append("== make.log (son satırlar)\n" + tail)
+        run(["depmod", "-a", rel])
+    ok = have()
+    try:
+        Path(BROADCOM_LOG).write_text("".join(log), encoding="utf-8")
+    except OSError:
+        pass
+    if not ok:
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Broadcom sürücüsü derlenemedi. Ayrıntılar: {BROADCOM_LOG}")
+        shown = [l for l in "".join(log).splitlines() if re.search(r"error|HATA|fatal|Error", l)][:6]
+        for l in shown:
+            print(f"  {l[:150]}")
+    return ok
+
+
+def install_broadcom():
+    check_root()
+    if not (shutil.which("apt-get") and is_mindos_paradise()):
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Broadcom kurulumu yalnızca MindOS Paradise'ta desteklenir.")
+        sys.exit(1)
+    if is_live_session():
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Canlı oturumda sürücü kurulamaz; önce MindOS'u diske kurun.")
+        sys.exit(1)
+    if kernel_flavor() == "debian":
+        print(f"{COLOR_YELLOW}Bu bilgisayar Debian kernel'ini kullanıyor; Debian'ın broadcom-sta-dkms paketi kuruluyor.{COLOR_RESET}")
+        ensure_debian_nonfree()
+        subprocess.run(["apt-get", "update", "-qq"], check=False)
+        deb_arch = get_debian_arch()
+        sys.exit(subprocess.run(["apt-get", "install", "-y", *APT_OPTS, f"linux-headers-{deb_arch}",
+                                 "broadcom-sta-dkms"], env={**os.environ, **APT_ENV}).returncode)
+    cards = broadcom_wifi()
+    if not cards:
+        print(f"{COLOR_YELLOW}Bu bilgisayarda Broadcom Wi-Fi kartı bulunamadı.{COLOR_RESET}")
+        return
+    for line, drv in cards:
+        print(f"  • {line.split(': ', 1)[-1]}  (sürücü: {drv or 'yok'})")
+    if all(drv and drv != "wl" for _, drv in cards):
+        print(f"{COLOR_GREEN}✓ Kartınız kernel'in kendi sürücüsüyle ({', '.join(d for _, d in cards)}) çalışıyor; "
+              f"ek sürücü gerekmiyor.{COLOR_RESET}")
+        return
+    install_system_component("linux-headers")
+    install_system_component("broadcom-sta-dkms")
+    if not ensure_broadcom_module():
+        sys.exit(1)
+    # Broadcom'un hazır derlenmiş parçası Intel IBT'ye (dolaylı atlama koruması, 11. nesil ve sonrası)
+    # hazır değil; bu işlemcilerde IBT yalnızca uyarı moduna alınır, yoksa sürücü çöker
+    try:
+        ibt_cpu = " ibt" in next(l for l in open("/proc/cpuinfo") if l.startswith("flags"))
+    except (OSError, StopIteration):
+        ibt_cpu = False
+    if ibt_cpu and not os.path.exists(BROADCOM_GRUB):
+        Path(BROADCOM_GRUB).parent.mkdir(parents=True, exist_ok=True)
+        Path(BROADCOM_GRUB).write_text(
+            '# MindOS: Broadcom wl sürücüsü Intel IBT ile çalışmaz; IBT uyarı modunda (mindpkg install broadcom)\n'
+            'GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT ibt=warn"\n', encoding="utf-8")
+        subprocess.run(["update-grub"], check=False)
+    code = queue_dkms_key_enrollment()
+    if not code and not ibt_cpu:
+        # açık kaynak Broadcom sürücüleri kartı tutuyorsa wl bağlanamaz; önce boşaltılır
+        for mod in ("b43", "b43legacy", "brcmsmac", "brcmfmac", "bcma", "ssb"):
+            subprocess.run(["modprobe", "-r", mod], capture_output=True)
+        r = subprocess.run(["modprobe", "wl"], capture_output=True, text=True)
+        if r.returncode == 0:
+            import time
+            time.sleep(3)
+            ifaces = [n for n in os.listdir("/sys/class/net") if os.path.isdir(f"/sys/class/net/{n}/wireless")]
+            if ifaces:
+                print(f"\n{COLOR_GREEN}✓ Broadcom Wi-Fi sürücüsü (wl) çalışıyor: {', '.join(ifaces)}. "
+                      f"Ağlar birkaç saniye içinde görünür.{COLOR_RESET}")
+                return
+            print(f"\n{COLOR_YELLOW}⚠ wl yüklendi ama kablosuz arabirim oluşmadı. Bilgisayarı yeniden başlatın; "
+                  f"sorun sürerse 'sudo dmesg | grep -i wl' çıktısını MindOS ekibine iletin.{COLOR_RESET}")
+            return
+        err = (r.stderr or "").strip()
+        if "rejected" in err.lower() or "Key" in err:
+            print(f"\n{COLOR_YELLOW}⚠ Secure Boot modülün imzasını henüz tanımıyor. Bilgisayarı yeniden başlatın; mavi "
+                  f"ekranda 'Enroll MOK' seçip kodu girin (kod yoksa: sudo mindpkg install broadcom).{COLOR_RESET}")
+            return
+        print(f"\n{COLOR_YELLOW}⚠ wl şimdi yüklenemedi ({err or 'bilinmeyen hata'}). Bilgisayarı yeniden başlatın.{COLOR_RESET}")
+        return
+    print(f"\n{COLOR_GREEN}✓ Broadcom Wi-Fi sürücüsü (wl) kuruldu.{COLOR_RESET} Etkinleşmesi için bilgisayarı yeniden başlatın.")
+    if code:
+        print(f"\n{COLOR_BOLD}Secure Boot açık:{COLOR_RESET} yeniden başlarken mavi bir ekran (MOK Manager) gelecek.\n"
+              f"  'Enroll MOK' → 'Continue' → 'Yes' seçin ve şu kodu girin: {COLOR_BOLD}{code}{COLOR_RESET}\n"
+              f"  Ardından 'Reboot'. Bu bir kez yapılır.")
+
+_index_cache = None
+
+
+def repo_index():
+    """Tüm depo indeksleri, ad -> en yeni kayıt (bir kez okunur; 'update' sonrası yenilenir)"""
+    global _index_cache
+    if _index_cache is None:
+        _index_cache = {}
+        for r in sorted(Path(REPOS_CACHE).glob("*.json")):
+            try:
+                with open(r, "r", encoding="utf-8") as f:
+                    packages = json.load(f).get("packages", [])
+            except Exception:
+                continue
+            for pkg in packages:
+                name = pkg.get("name")
+                if not name or "snap" in str(pkg.get("version", "")):  # snap yönlendirme paketleri
+                    continue
+                pkg = dict(pkg, _repo=r.stem)
+                old = _index_cache.get(name)
+                if old is None or is_newer(full_version(pkg), full_version(old)):
+                    _index_cache[name] = pkg
+    return _index_cache
+
+
+def find_in_index(pkg_name):
+    """Yerel depo indekslerinde paketi arar"""
+    return repo_index().get(pkg_name)
+
+
+def dpkg_owned_conflicts(paths):
+    """Sistem paket yöneticisine (dpkg) ait olup üzerine yazılacak dosyaları döndürür"""
+    info = Path("/var/lib/dpkg/info")
+    if not info.is_dir():
+        return []
+    owned = set()
+    for lst in info.glob("*.list"):
+        try:
+            owned.update(lst.read_text(encoding="utf-8", errors="replace").splitlines())
+        except Exception:
+            pass
+    merged = {"/bin": "/usr/bin", "/sbin": "/usr/sbin", "/lib": "/usr/lib", "/lib64": "/usr/lib64"}
+    conflicts = []
+    for p in paths:
+        if p.endswith("/") or not os.path.lexists(p) or os.path.isdir(p):
+            continue
+        alts = {p}
+        for short, full in merged.items():
+            if p.startswith(full + "/"):
+                alts.add(short + p[len(full):])
+            elif p.startswith(short + "/"):
+                alts.add(full + p[len(short):])
+        if alts & owned:
+            conflicts.append(p)
+    return conflicts
+
+
+def fetch_verified(pkg_name, target_meta):
+    """Depo kaydındaki .mind dosyasını indirir, SHA256 ile doğrular ve önbellek yolunu döndürür"""
+    url = target_meta.get("url") or ""
+    filename = Path(target_meta.get("filename") or f"{pkg_name}.mind").name
+    expected_sha256 = (target_meta.get("sha256") or "").lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256) or not filename.endswith(".mind"):
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} '{pkg_name}' için depo kaydı eksik ya da geçersiz (SHA256 yok). Güvenlik için kurulmadı.")
+        sys.exit(1)
+    cached_file = Path(CACHE_DIR) / filename
+
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} İndiriliyor: {COLOR_BOLD}{pkg_name} {target_meta.get('version')}{COLOR_RESET} ...")
+    print(f"  {COLOR_ACCENT}Kaynak:{COLOR_RESET} {url}")
+    try:
+        download_with_progress(url, cached_file)
+    except Exception as e:
+        cached_file.unlink(missing_ok=True)
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} '{pkg_name}' MindOS deposundan indirilemedi: {e}")
+        sys.exit(1)
+
+    if expected_sha256:
+        print(f"  {COLOR_ACCENT}Doğrulanıyor (SHA256)...{COLOR_RESET}")
+        actual_sha256 = calculate_sha256(cached_file)
+        if actual_sha256 != expected_sha256:
+            print(f"{COLOR_RED}Hata:{COLOR_RESET} SHA256 doğrulama başarısız! Dosya bozulmuş olabilir.")
+            cached_file.unlink(missing_ok=True)
+            sys.exit(1)
+        print(f"  {COLOR_GREEN}✓ İmza doğrulandı.{COLOR_RESET}")
+
+    return cached_file
+
+
+def install_from_repo_or_name(pkg_name):
+    """Depolarda paket adını arar, indirir, SHA256 doğrular ve kurar"""
+    check_root()
+    require_pkg_name(pkg_name)
+    if pkg_name in ("nvidia", "nvidia-driver-mindos", "nvidia-driver") and is_mindos_paradise():
+        install_nvidia()
+        return
+    if pkg_name in ("broadcom", "broadcom-wl", "broadcom-sta", "broadcom-sta-dkms", "wl") and is_mindos_paradise():
+        install_broadcom()
+        return
+    if install_system_component(pkg_name):
+        return
+    # Flathub'a eşlenmiş adlar (discord, spotify, zoom ...) Debian'dan önce: bazı adlar Debian'da başka paket
+    fp = flatpak_alias(pkg_name)
+    if fp and not resolve_vendor_app(pkg_name)[0]:
+        if flatpak_ready():
+            install_flatpak(fp)
+            return
+    # Debian tabanlı sistemlerde (MindOS Paradise) önce üreticinin resmi deposu ve
+    # sisteme özel derlenmiş Debian paketi denenir; yoksa MindOS .mind deposuna geçilir.
+    if shutil.which("apt-get") and install_from_system(pkg_name):
+        return
+
+    target_meta = find_in_index(pkg_name)
+    if not target_meta:
+        print(f"{COLOR_BANNER}Paket yerel önbellekte bulunamadı, depolar güncelleniyor...{COLOR_RESET}")
+        update_repos()
+        target_meta = find_in_index(pkg_name)
+
+    if not target_meta:
+        # Son çare Flathub: adı tam eşleşen bir masaüstü uygulaması varsa onu kur
+        if flatpak_ready(update_appstream=True):
+            app_id = flathub_exact(pkg_name)
+            if app_id:
+                install_flatpak(app_id)
+                return
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} '{pkg_name}' MindOS deposunda, Debian'da ve Flathub'da bulunamadı.")
+        print(f"{COLOR_ACCENT}İpucu:{COLOR_RESET} Benzer adları görmek için: {COLOR_BOLD}mindpkg search {pkg_name}{COLOR_RESET}")
+        sys.exit(1)
+
+    install_mind_file(fetch_verified(pkg_name, target_meta))
+
+
+def delete_tracked_files(paths):
+    """mindpkg'nin kurduğu dosyaları siler; dpkg'ye ait dosyalara ve sistem dizinlerine dokunmaz"""
+    files = [f for f in paths if isinstance(f, str) and f.startswith("/")
+             and ".." not in f.split("/") and f.rstrip("/") not in PROTECTED_PATHS]
+    shared = set(dpkg_owned_conflicts(files))
+    for file_path in sorted(files, key=len, reverse=True):
+        if file_path in shared:
+            continue  # bu dosya bir sistem paketine ait, silinmez
+        p = Path(file_path)
+        try:
+            if p.is_symlink() or p.is_file():
+                p.unlink(missing_ok=True)
+            elif p.is_dir():
+                if not any(p.iterdir()):
+                    p.rmdir()
+        except Exception:
+            pass
+
+
+def remove_package(pkg_name):
+    """Sistemden kurulu bir paketi temiz bir şekilde kaldırır"""
+    check_root()
+    require_pkg_name(pkg_name)
+    pkg_record = Path(INSTALLED_DIR) / f"{pkg_name}.json"
+    if not pkg_record.exists():
+        sys_pkg = resolve_vendor_app(pkg_name)[0] or pkg_name
+        st = subprocess.run(["dpkg-query", "-W", "-f=${db:Status-Abbrev}", sys_pkg],
+                            capture_output=True, text=True).stdout if shutil.which("dpkg-query") else ""
+        fp = flatpak_installed_id(pkg_name)
+        if fp and not st.startswith("ii"):
+            print(f"{COLOR_RED}==>{COLOR_RESET} Flatpak uygulaması kaldırılıyor: {COLOR_BOLD}{fp}{COLOR_RESET} ...")
+            res = subprocess.run(["flatpak", "uninstall", "-y", "--noninteractive", fp])
+            if res.returncode == 0:
+                print(f"{COLOR_GREEN}✓ Tamamlandı:{COLOR_RESET} {fp} kaldırıldı.")
+            sys.exit(res.returncode)
+        if st.startswith("ii") and shutil.which("apt-get"):
+            print(f"{COLOR_RED}==>{COLOR_RESET} Sistem paketi kaldırılıyor: {COLOR_BOLD}{sys_pkg}{COLOR_RESET} ...")
+            res = subprocess.run(["apt-get", "remove", "-y", "--", sys_pkg],
+                                 env={**os.environ, "DEBIAN_FRONTEND": "noninteractive"})
+            if res.returncode == 0:
+                run_system_triggers()
+                print(f"{COLOR_GREEN}✓ Tamamlandı:{COLOR_RESET} {sys_pkg} sistemden kaldırıldı.")
+            sys.exit(res.returncode)
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} '{pkg_name}' sistemde kurulu değil!")
+        sys.exit(1)
+
+    with open(pkg_record, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+
+    print(f"{COLOR_RED}==>{COLOR_RESET} Kaldırılıyor: {COLOR_BOLD}{pkg_name} ({meta.get('version')}){COLOR_RESET} ...")
+
+    hook_dir = Path(HOOKS_DIR) / pkg_name
+    if (hook_dir / "pre_remove.sh").exists():
+        subprocess.run([str(hook_dir / "pre_remove.sh")])
+    delete_tracked_files(meta.get("installed_files", []))
+    if (hook_dir / "post_remove.sh").exists():
+        subprocess.run([str(hook_dir / "post_remove.sh")])
+    shutil.rmtree(hook_dir, ignore_errors=True)
+
+    pkg_record.unlink(missing_ok=True)
+    run_system_triggers()
+    print(f"{COLOR_GREEN}✓ Tamamlandı:{COLOR_RESET} {pkg_name} sistemden kaldırıldı.")
+
+
+def list_installed():
+    """Kurulu paketleri listeler"""
+    records = list(Path(INSTALLED_DIR).glob("*.json"))
+    if not records:
+        print(f"{COLOR_ACCENT}Sistemde mindpkg ile kurulmuş paket bulunmuyor.{COLOR_RESET}")
+        return
+
+    print(f"{COLOR_BOLD}{'Paket Adı':<25} {'Sürüm':<15} {'Açıklama'}{COLOR_RESET}")
+    print(f"{'-'*70}")
+    for r in sorted(records):
+        try:
+            with open(r, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+            name = meta.get("name", r.stem)
+            ver = meta.get("version", "-")
+            desc = meta.get("description", "-")
+            print(f"{COLOR_GREEN}{name:<25}{COLOR_RESET} {ver:<15} {desc}")
+        except Exception:
+            pass
+
+
+def info_package(pkg_name):
+    """Paket hakkında detaylı bilgi gösterir"""
+    require_pkg_name(pkg_name)
+    pkg_record = Path(INSTALLED_DIR) / f"{pkg_name}.json"
+    if pkg_record.exists():
+        with open(pkg_record, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+        print(f"{COLOR_BOLD}Paket Adı:{COLOR_RESET}     {meta.get('name')}")
+        print(f"{COLOR_BOLD}Sürüm:{COLOR_RESET}         {meta.get('version')}")
+        print(f"{COLOR_BOLD}Açıklama:{COLOR_RESET}      {meta.get('description')}")
+        print(f"{COLOR_BOLD}Mimari:{COLOR_RESET}        {meta.get('architecture', 'all')}")
+        print(f"{COLOR_BOLD}Durum:{COLOR_RESET}         {COLOR_GREEN}Kurulu{COLOR_RESET}")
+        print(f"{COLOR_BOLD}Dosya Sayısı:{COLOR_RESET}  {len(meta.get('installed_files', []))}")
+        return
+
+    for r in Path(REPOS_CACHE).glob("*.json"):
+        try:
+            with open(r, "r", encoding="utf-8") as f:
+                repo_data = json.load(f)
+            for pkg in repo_data.get("packages", []):
+                if pkg.get("name") == pkg_name:
+                    print(f"{COLOR_BOLD}Paket Adı:{COLOR_RESET}     {pkg.get('name')}")
+                    print(f"{COLOR_BOLD}Sürüm:{COLOR_RESET}         {pkg.get('version')}-{pkg.get('release', '1')}")
+                    print(f"{COLOR_BOLD}Açıklama:{COLOR_RESET}      {pkg.get('description')}")
+                    print(f"{COLOR_BOLD}Mimari:{COLOR_RESET}        {pkg.get('architecture', 'all')}")
+                    print(f"{COLOR_BOLD}Durum:{COLOR_RESET}         {COLOR_ACCENT}Depoda Mevcut ({r.stem}){COLOR_RESET}")
+                    print(f"{COLOR_BOLD}Paket Boyutu:{COLOR_RESET}  {pkg.get('size', 0):,} bayt")
+                    print(f"{COLOR_BOLD}İndirme URL:{COLOR_RESET}   {pkg.get('url')}")
+                    return
+        except Exception:
+            pass
+
+    print(f"{COLOR_RED}Hata:{COLOR_RESET} '{pkg_name}' bulunamadı.")
+
+
+def search_repos(query, limit=40):
+    """Depolarda arar: önce tam ad, sonra adla başlayan, adında geçen, açıklamada geçen"""
+    query = query.lower().strip()
+    print(f"{COLOR_ACCENT}==>{COLOR_RESET} Aranıyor: '{COLOR_BOLD}{query}{COLOR_RESET}' ...\n")
+    installed = {p.stem for p in Path(INSTALLED_DIR).glob("*.json")}
+    ranked = []
+    for name, pkg in repo_index().items():
+        n, desc = name.lower(), str(pkg.get("description", "")).lower()
+        if n == query:
+            score = 0
+        elif n.startswith(query):
+            score = 1
+        elif query in n:
+            score = 2
+        elif query in desc:
+            score = 3
+        else:
+            continue
+        ranked.append((score, len(name), name, pkg))
+    found = False
+    if ranked:
+        found = True
+        ranked.sort()
+        print(f"{COLOR_BOLD}MindOS deposu{COLOR_RESET}")
+        for _, _, name, pkg in ranked[:limit]:
+            mark = f" [{COLOR_ACCENT}kurulu{COLOR_RESET}]" if name in installed else ""
+            print(f"  {COLOR_GREEN}{name}{COLOR_RESET} {pkg.get('version')}{mark}")
+            print(f"    {pkg.get('description', '')}")
+        if len(ranked) > limit:
+            print(f"\n  ... ve {len(ranked) - limit} paket daha. Aramayı daraltın.")
+    vend = [(pkg, spec) for pkg, spec in VENDOR_APPS.items()
+            if query in pkg or any(query in a for a in spec["aliases"])]
+    if vend:
+        found = True
+        print(f"\n{COLOR_BOLD}Üreticinin resmi deposu{COLOR_RESET}")
+        for pkg, spec in vend:
+            print(f"  {COLOR_GREEN}{spec['aliases'][0]}{COLOR_RESET}  ({pkg})")
+    if shutil.which("apt-cache"):
+        out = subprocess.run(["apt-cache", "search", "--names-only", query], capture_output=True, text=True).stdout
+        deb = [l.split(" - ", 1) for l in out.splitlines() if " - " in l]
+        deb.sort(key=lambda x: (x[0] != query, not x[0].startswith(query), len(x[0])))
+        if deb:
+            found = True
+            print(f"\n{COLOR_BOLD}Debian{COLOR_RESET}")
+            for n, d in deb[:15]:
+                print(f"  {COLOR_GREEN}{n}{COLOR_RESET}  {d}")
+            if len(deb) > 15:
+                print(f"  ... ve {len(deb) - 15} paket daha.")
+    fps = flatpak_search(query)
+    alias = flatpak_alias(query)
+    if alias and alias not in [a for a, _, _ in fps]:
+        fps.insert(0, (alias, alias.rsplit(".", 1)[-1], ""))
+    if fps:
+        found = True
+        print(f"\n{COLOR_BOLD}Flathub{COLOR_RESET}")
+        for app_id, title, desc in fps:
+            print(f"  {COLOR_GREEN}{app_id}{COLOR_RESET}  {title}{(' - ' + desc) if desc else ''}")
+    if found:
+        print(f"\nKurmak için: {COLOR_BOLD}sudo mindpkg install <ad veya kimlik>{COLOR_RESET}")
+    else:
+        print(f"'{query}' ile eşleşen bir paket bulunamadı.")
+
+
+def build_package(source_dir, output_file=None):
+    """Bir dizinden resmi .mind paketi inşa eder"""
+    src_path = Path(source_dir).resolve()
+    meta_file = src_path / "metadata.json"
+    files_dir = src_path / "rootfs"
+
+    if not meta_file.exists():
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} {meta_file} bulunamadı!")
+        sys.exit(1)
+
+    with open(meta_file, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+
+    pkg_name = meta.get("name", "unnamed")
+    require_pkg_name(pkg_name)
+    pkg_ver = meta.get("version", "1.0.0")
+    pkg_rel = meta.get("release", "1")
+    pkg_arch = meta.get("architecture", get_system_arch())
+
+    if not output_file:
+        output_file = f"{pkg_name}-{pkg_ver}-{pkg_rel}-{pkg_arch}.mind"
+
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} Paket derleniyor: {COLOR_BOLD}{output_file}{COLOR_RESET} ...")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        shutil.copy2(meta_file, tmp_path / "metadata.json")
+
+        for hook in ["pre_install.sh", "post_install.sh", "pre_remove.sh", "post_remove.sh"]:
+            h_file = src_path / hook
+            if h_file.exists():
+                shutil.copy2(h_file, tmp_path / hook)
+
+        files_archive = tmp_path / "files.tar.zst"
+        if files_dir.exists():
+            subprocess.run(["tar", "--zstd", "-cf", str(files_archive), "--owner=0", "--group=0", "--numeric-owner",
+                            "-C", str(files_dir), "."], check=True)
+        else:
+            subprocess.run(["tar", "--zstd", "-cf", str(files_archive), "--files-from", "/dev/null"], check=True)
+
+        subprocess.run(["tar", "--zstd", "-cf", str(Path(output_file).resolve()), "--owner=0", "--group=0",
+                        "--numeric-owner", "-C", str(tmp_path), "."], check=True)
+
+    print(f"{COLOR_GREEN}✓ BAŞARILI:{COLOR_RESET} {output_file} hazırlandı! ({os.path.getsize(output_file):,} bayt)")
+
+
+# ------------------------------------------------------------------------------
+# Yükseltme (mindpkg upgrade)
+# ------------------------------------------------------------------------------
+
+def _version_key(text):
+    """dpkg yoksa kullanılan basit sürüm karşılaştırma anahtarı"""
+    return [(0, int(t), "") if t.isdigit() else (1, 0, t) for t in re.findall(r"\d+|[A-Za-z]+", str(text))]
+
+
+def is_newer(candidate, current):
+    """candidate sürümü current'tan yeni mi? (Debian sürüm kuralları)"""
+    if candidate == current:
+        return False
+    if shutil.which("dpkg"):
+        return subprocess.run(["dpkg", "--compare-versions", str(candidate), "gt", str(current)]).returncode == 0
+    return _version_key(candidate) > _version_key(current)
+
+
+def full_version(meta):
+    return f"{meta.get('version', '0')}-{meta.get('release', '1')}"
+
+
+def latest_mindpkg_release():
+    """Depo indekslerindeki en yeni mindpkg sürüm kaydını döndürür"""
+    best = None
+    for doc in meta_documents():
+        entry = doc.get("mindpkg")
+        if isinstance(entry, dict) and entry.get("version") and (best is None or is_newer(entry["version"], best["version"])):
+            best = entry
+    return best
+
+
+# mindpkg sürümlerini imzalayan anahtar (özel anahtar yalnızca MindOS geliştiricisinde durur).
+# GitHub deposu ele geçirilse bile imzasız ya da başka anahtarla imzalanmış mindpkg kurulmaz.
+RELEASE_PUBKEY = """-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEA0kq80lqdyWdIHD0A1w62Xsrp0QDcSQWEYOSxlz3lMhw=
+-----END PUBLIC KEY-----
+"""
+
+
+def verify_release_signature(path, sig_b64):
+    """Ed25519 imzasını openssl ile doğrular"""
+    import base64
+    if not shutil.which("openssl"):
+        raise ValueError("openssl bulunamadı, imza doğrulanamıyor")
+    try:
+        sig = base64.b64decode(sig_b64, validate=True)
+    except Exception:
+        raise ValueError("imza biçimi bozuk")
+    with tempfile.TemporaryDirectory() as td:
+        pub = Path(td) / "pub.pem"
+        sigf = Path(td) / "sig"
+        pub.write_text(RELEASE_PUBKEY)
+        sigf.write_bytes(sig)
+        r = subprocess.run(["openssl", "pkeyutl", "-verify", "-pubin", "-inkey", str(pub), "-rawin",
+                            "-in", str(path), "-sigfile", str(sigf)], capture_output=True, text=True)
+        if r.returncode != 0:
+            raise ValueError("imza geçersiz (resmi MindOS anahtarıyla imzalanmamış)")
+
+
+def self_update():
+    """Yeni mindpkg sürümü varsa indirir, doğrular, kendini değiştirir ve yeni sürümle devam eder"""
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} mindpkg güncellemesi denetleniyor...")
+    rel = latest_mindpkg_release()
+    if not rel or not is_newer(rel["version"], VERSION):
+        print(f"  {COLOR_GREEN}✓{COLOR_RESET} mindpkg güncel (v{VERSION}).")
+        return
+    new_ver, url = str(rel["version"]), str(rel.get("url", ""))
+    sha = str(rel.get("sha256", "")).lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", sha) or not re.fullmatch(r"[0-9A-Za-z.+~-]+", new_ver):
+        print(f"  {COLOR_RED}⚠ mindpkg {new_ver} kaydı geçersiz (SHA256 yok), atlanıyor.{COLOR_RESET}")
+        return
+    self_path = Path(os.path.realpath(__file__))
+    print(f"  {COLOR_ACCENT}Yeni sürüm:{COLOR_RESET} v{VERSION} → {COLOR_BOLD}v{new_ver}{COLOR_RESET}")
+    fd, tmp = tempfile.mkstemp(prefix=".mindpkg-", dir=str(self_path.parent))
+    os.close(fd)
+    tmp = Path(tmp)
+    try:
+        download_with_progress(url, tmp)
+        if calculate_sha256(tmp) != sha:
+            raise ValueError("SHA256 doğrulaması başarısız")
+        verify_release_signature(tmp, str(rel.get("sig", "")))
+        code = tmp.read_text(encoding="utf-8")
+        compile(code, str(tmp), "exec")  # sözdizimi bozuk bir dosya asla kurulmaz
+        if f'VERSION = "{new_ver}"' not in code:
+            raise ValueError("indirilen dosyanın sürümü beklenenle uyuşmuyor")
+        shutil.copy2(self_path, Path(DB_DIR) / "mindpkg.previous")  # geri dönüş için
+        os.chmod(tmp, 0o755)
+        os.replace(tmp, self_path)
+    except Exception as e:
+        tmp.unlink(missing_ok=True)
+        print(f"  {COLOR_RED}⚠ mindpkg güncellenemedi: {e}{COLOR_RESET}")
+        return
+    print(f"  {COLOR_GREEN}✓ mindpkg v{new_ver} kuruldu, yükseltme yeni sürümle sürüyor...{COLOR_RESET}\n")
+    sys.stdout.flush()
+    os.execv(sys.executable, [sys.executable, str(self_path), "upgrade", "--no-self-update", "--resumed",
+                              *[a for a in sys.argv[2:] if a not in ("--no-self-update", "--resumed")]])
+
+
+def system_components():
+    """Depo indekslerindeki MindOS sistem bileşenleri (kernel, MindOS uygulamaları): ad -> en yeni kayıt"""
+    found = {}
+    for doc in meta_documents():
+        entries = doc.get("system", [])
+        for e in entries if isinstance(entries, list) else []:
+            if not isinstance(e, dict):
+                continue
+            name, ver = str(e.get("name", "")), str(e.get("version", ""))
+            if not valid_pkg_name(name) or not re.fullmatch(r"[0-9A-Za-z.+~:-]+", ver):
+                continue
+            if name not in found or is_newer(ver, found[name]["version"]):
+                found[name] = e
+    return found
+
+
+def is_mindos_paradise():
+    try:
+        with open("/etc/os-release", encoding="utf-8") as f:
+            if "MindOS Paradise" in f.read():
+                return True
+    except OSError:
+        pass
+    # os-release bir Debian güncellemesiyle değişse bile MindOS Paradise tanınsın
+    return os.path.exists(RELEASE_FILE) and os.path.isdir("/usr/share/mindos")
+
+
+def installed_version(name):
+    """dpkg'de kurulu sürüm; kurulu değilse None"""
+    cur = subprocess.run(["dpkg-query", "-W", "-f=${db:Status-Abbrev}${Version}", name],
+                         capture_output=True, text=True).stdout
+    return cur[3:].strip() or None if cur.startswith("ii") else None
+
+
+def pending_components(comps=None):
+    """Depoda daha yenisi olan sistem bileşenleri: [(ad, kayıt, kurulu_sürüm|None)]"""
+    if not (shutil.which("dpkg-query") and shutil.which("apt-get") and is_mindos_paradise()):
+        return []
+    pending = []
+    for name, e in sorted((system_components() if comps is None else comps).items()):
+        if kernel_flavor() == "debian" and re.match(r"linux-(image|headers)-.*-mindos$", name):
+            continue  # NVIDIA 550 için Debian kernel'ine geçmiş bilgisayar
+        cur = installed_version(name)
+        if cur is None and e.get("optional"):
+            # ör. kernel başlıkları: yalnızca istenince kurulur; ama eski kernel'in başlıkları kuruluysa
+            # (NVIDIA/DKMS) yeni kernel'in başlıkları da gelir, yoksa sürücü yeni kernel'de derlenemez
+            if not (name.startswith("linux-headers-") and subprocess.run(
+                    ["dpkg-query", "-W", "-f=${db:Status-Abbrev}", "linux-headers-*-mindos"],
+                    capture_output=True, text=True).stdout.count("ii")):
+                continue
+        if cur is None or is_newer(str(e["version"]), cur):
+            pending.append((name, e, cur))
+    return pending
+
+
+def fetch_component(name, e, dest_dir):
+    """Sistem bileşeni .deb'ini indirir; SHA256 ve MindOS imzasını doğrular. Hata olursa ValueError."""
+    ver = str(e["version"])
+    sha = str(e.get("sha256", "")).lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", sha):
+        raise ValueError("kayıt geçersiz (SHA256 yok)")
+    deb = Path(dest_dir) / f"{name}_{ver.replace(':', '%3a')}.deb"
+    try:
+        download_with_progress(str(e.get("url", "")), deb)
+        if calculate_sha256(deb) != sha:
+            raise ValueError("SHA256 doğrulaması başarısız")
+        verify_release_signature(deb, str(e.get("sig", "")))
+    except Exception:
+        deb.unlink(missing_ok=True)
+        raise
+    return deb
+
+
+APT_ENV = {"DEBIAN_FRONTEND": "noninteractive", "NEEDRESTART_MODE": "l"}
+APT_OFFLINE_NET = ["-o", "Acquire::Retries=0", "-o", "Acquire::http::Timeout=5", "-o", "Acquire::https::Timeout=5"]
+APT_OPTS = ["-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold",
+            "-o", "DPkg::Lock::Timeout=300"]
+
+
+def install_system_component(name):
+    """MindOS sistem bileşenini (ör. linux-headers-7.2.10-mindos) imzalı .deb'den kurar.
+    'linux-headers' çalışan MindOS kernel'inin başlıklarıdır (NVIDIA, VirtualBox gibi DKMS modülleri için)."""
+    if not (shutil.which("apt-get") and is_mindos_paradise()):
+        return False
+    if name in ("linux-headers", "kernel-headers", "linux-headers-mindos"):
+        name = f"linux-headers-{os.uname().release}"
+    comps = system_components()
+    if name not in comps and name.startswith("linux-headers-"):
+        update_repos()
+        comps = system_components()
+    e = comps.get(name)
+    if not e:
+        if name.startswith("linux-headers-") and name.endswith("-mindos"):
+            print(f"{COLOR_RED}Hata:{COLOR_RESET} {name} depoda yok. Önce 'sudo mindpkg upgrade' ile kernel'i "
+                  f"güncelleyip bilgisayarı yeniden başlatın.")
+            sys.exit(1)
+        return False
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} MindOS bileşeni kuruluyor: {COLOR_BOLD}{name} {e['version']}{COLOR_RESET}")
+    try:
+        deb = fetch_component(name, e, CACHE_DIR)
+    except Exception as ex:
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} {name} indirilemedi: {ex}")
+        sys.exit(1)
+    res = subprocess.run(["apt-get", "install", "-y", *APT_OPTS, str(deb.resolve())], env={**os.environ, **APT_ENV})
+    deb.unlink(missing_ok=True)
+    if res.returncode != 0:
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} {name} kurulamadı (apt-get çıkış kodu {res.returncode}).")
+        sys.exit(1)
+    print(f"{COLOR_GREEN}✓ {name} {e['version']} kuruldu.{COLOR_RESET}")
+    return True
+
+
+def cleanup_old_kernels():
+    """Yeni MindOS kernel'i kurulunca eskileri kaldırır. En yeni iki kernel (yenisi sorun çıkarırsa
+    GRUB'dan açılacak yedek) ve şu an çalışan kernel kalır; her biri ~100 MB, /boot dolmasın."""
+    import functools
+    out = subprocess.run(["dpkg-query", "-W", "-f=${Package} ${Version} ${db:Status-Abbrev}\n",
+                          "linux-image-*-mindos"], capture_output=True, text=True).stdout
+    installed = [(f[0], f[1]) for f in (l.split() for l in out.splitlines()) if len(f) >= 3 and f[2] == "ii"]
+    if len(installed) < 3:
+        return
+    installed.sort(key=functools.cmp_to_key(lambda a, b: 1 if is_newer(a[1], b[1]) else -1), reverse=True)
+    keep = {installed[0][0], installed[1][0], f"linux-image-{os.uname().release}"}
+    old = [pkg for pkg, _ in installed if pkg not in keep]
+    if not old:
+        return
+    headers = subprocess.run(["dpkg-query", "-W", "-f=${Package} ${db:Status-Abbrev}\n", "linux-headers-*-mindos"],
+                             capture_output=True, text=True).stdout.split("\n")
+    have = {l.split()[0] for l in headers if len(l.split()) >= 2 and l.split()[1] == "ii"}
+    old += [h for h in (p.replace("linux-image-", "linux-headers-", 1) for p in old) if h in have]
+    print(f"  Eski kernel'ler kaldırılıyor: {', '.join(old)}")
+    subprocess.run(["apt-get", "purge", "-y", *APT_OPTS, *old], env={**os.environ, **APT_ENV})
+
+
+
+def upgrade_system_components():
+    """Kernel ve MindOS uygulamalarını imzalı .deb paketleriyle günceller (yalnızca MindOS Paradise)"""
+    pending = pending_components()
+    if not pending:
+        return
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} MindOS sistem bileşenleri güncelleniyor...")
+    kernel_updated = False
+    for name, e, cur in pending:
+        ver = str(e["version"])
+        print(f"  • {COLOR_BOLD}{name}{COLOR_RESET} {cur or '(yeni)'} → {ver}")
+        try:
+            deb = fetch_component(name, e, CACHE_DIR)
+        except Exception as ex:
+            print(f"  {COLOR_RED}⚠ {name} güncellenemedi: {ex}{COLOR_RESET}")
+            continue
+        res = subprocess.run(["apt-get", "install", "-y", *APT_OPTS, str(deb.resolve())],
+                             env={**os.environ, **APT_ENV})
+        deb.unlink(missing_ok=True)
+        if res.returncode == 0:
+            print(f"  {COLOR_GREEN}✓ {name} {ver} kuruldu.{COLOR_RESET}")
+            kernel_updated |= name.startswith("linux-image-")
+        else:
+            print(f"  {COLOR_RED}⚠ {name} kurulamadı (apt-get çıkış kodu {res.returncode}).{COLOR_RESET}")
+    if kernel_updated:
+        cleanup_old_kernels()
+        print(f"  {COLOR_YELLOW}Yeni kernel kuruldu; etkinleşmesi için bilgisayarı yeniden başlatın.{COLOR_RESET}")
+
+
+def pending_mind_packages():
+    """Depoda daha yenisi olan kurulu .mind paketleri: [(ad, eski_kayıt, yeni_kayıt)]"""
+    pending = []
+    for rec in sorted(Path(INSTALLED_DIR).glob("*.json")):
+        try:
+            with open(rec, "r", encoding="utf-8") as f:
+                old = json.load(f)
+        except Exception:
+            continue
+        name = old.get("name", rec.stem)
+        new = find_in_index(name) if valid_pkg_name(name) else None
+        if new and is_newer(full_version(new), full_version(old)):
+            pending.append((name, old, new))
+    return pending
+
+
+def install_mind_upgrade(name, old, path):
+    """İndirilmiş .mind yükseltmesini kurar, eski sürümden kalan dosyaları temizler"""
+    install_mind_file(path)
+    with open(Path(INSTALLED_DIR) / f"{name}.json", "r", encoding="utf-8") as f:
+        now = set(json.load(f).get("installed_files", []))
+    delete_tracked_files([p for p in old.get("installed_files", []) if p not in now])
+
+
+def upgrade_mind_packages():
+    """Kurulu .mind paketlerinden depoda yenisi olanları yükseltir"""
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} MindOS (.mind) paketleri denetleniyor...")
+    pending = pending_mind_packages()
+    if not pending:
+        print(f"  {COLOR_GREEN}✓{COLOR_RESET} Tüm .mind paketleri güncel.")
+        return 0
+    for name, old, new in pending:
+        print(f"  • {COLOR_BOLD}{name}{COLOR_RESET} {full_version(old)} → {full_version(new)}")
+    for name, old, new in pending:
+        try:
+            install_mind_upgrade(name, old, fetch_verified(name, new))
+        except SystemExit:
+            print(f"  {COLOR_YELLOW}⚠ {name} yükseltilemedi, diğerleriyle devam ediliyor.{COLOR_RESET}")
+    return len(pending)
+
+
+def apt_pending():
+    """apt ile yükseltilecek paketlerin adları (benzetim; yetki gerektirmez)"""
+    if not shutil.which("apt-get"):
+        return []
+    r = subprocess.run(["apt-get", "-s", "-o", "Debug::NoLocking=1", "--with-new-pkgs", "upgrade"],
+                       capture_output=True, text=True, env={**os.environ, "LC_ALL": "C"})
+    return [line.split()[1] for line in r.stdout.splitlines() if line.startswith("Inst ")]
+
+
+def upgrade_system_packages():
+    """apt/üretici deposundan kurulan uygulamaları (Chrome, VS Code, Debian paketleri) yükseltir"""
+    if not shutil.which("apt-get"):
+        return
+    print(f"{COLOR_GREEN}==>{COLOR_RESET} Sistem paketleri güncelleniyor (apt)...")
+    env = {**os.environ, **APT_ENV}
+    ensure_firmware_backports()
+    subprocess.run(["apt-get", "update", "-qq"], env=env, check=False)
+    res = subprocess.run(["apt-get", "-y", *APT_OPTS, "--with-new-pkgs", "upgrade"], env=env)
+    if res.returncode != 0:
+        print(f"  {COLOR_RED}⚠ apt yükseltmesi hata verdi (çıkış kodu {res.returncode}).{COLOR_RESET}")
+
+
+# ------------------------------------------------------------------------------
+# MindOS Paradise sürümü (ör. "MindOS Paradise 1.1") ve hafif güncelleme denetimi
+# ------------------------------------------------------------------------------
+_meta_docs = None   # 'mindpkg check' sırasında depodan taze okunan system.json belgeleri
+_meta_cache = None  # önbellekteki indekslerin yalnızca mindpkg/system/release kısımları
+
+
+def meta_documents():
+    """mindpkg / system / release kayıtlarını taşıyan depo belgeleri (indeksler bir kez okunur)"""
+    global _meta_cache
+    if _meta_docs is not None:
+        return _meta_docs
+    if _meta_cache is None:
+        _meta_cache = []
+        for r in sorted(Path(REPOS_CACHE).glob("*.json")):
+            try:
+                with open(r, "r", encoding="utf-8") as f:
+                    doc = json.load(f)
+            except Exception:
+                continue
+            _meta_cache.append({k: doc.get(k) for k in ("mindpkg", "system", "release") if k in doc})
+    return _meta_cache
+
+
+def fetch_meta_documents():
+    """Her depodan küçük system.json'u indirir (paket indeksi ~9 MB, bu birkaç KB); olmazsa önbellek kullanılır"""
+    global _meta_docs
+    docs = []
+    with tempfile.TemporaryDirectory() as td:
+        for repo in load_config().get("repositories", []):
+            if not repo.get("enabled", True):
+                continue
+            dest = Path(td) / f"{repo['name']}.json"
+            try:
+                fetch_signed(f"{repo['url']}/system.json", dest, repo.get("signed", True))
+                with open(dest, "r", encoding="utf-8") as f:
+                    docs.append(json.load(f))
+                continue
+            except Exception:
+                pass  # imzasız/bozuk/ulaşılamıyor: son doğrulanmış önbellek kullanılır
+            try:
+                with open(Path(REPOS_CACHE) / f"{repo['name']}.json", "r", encoding="utf-8") as f:
+                    docs.append(json.load(f))
+            except Exception:
+                pass
+    _meta_docs = docs
+
+
+def latest_release():
+    """Depodaki en yeni MindOS Paradise sürüm kaydı: {version, name, date, notes: {tr: [...], en: [...]}}"""
+    best = None
+    for d in meta_documents():
+        e = d.get("release")
+        if not isinstance(e, dict) or not re.fullmatch(r"[0-9][0-9A-Za-z.+~-]{0,31}", str(e.get("version", ""))):
+            continue
+        if best is None or is_newer(str(e["version"]), str(best["version"])):
+            best = e
+    return best
+
+
+def installed_release():
+    try:
+        with open(RELEASE_FILE, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("VERSION="):
+                    return line.split("=", 1)[1].strip().strip('"') or DEFAULT_RELEASE
+    except OSError:
+        pass
+    return DEFAULT_RELEASE
+
+
+def mark_release_installed():
+    """Tüm sistem bileşenleri depodaki sürümdeyse sistemi en yeni MindOS Paradise sürümü olarak işaretler"""
+    rel = latest_release()
+    if not rel or pending_components():
+        return
+    ver = str(rel["version"])
+    if os.path.exists(RELEASE_FILE) and not is_newer(ver, installed_release()):
+        return
+    tmp = RELEASE_FILE + ".new"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(f'NAME="MindOS Paradise"\nVERSION="{ver}"\nPRETTY_NAME="MindOS Paradise {ver}"\n')
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, RELEASE_FILE)
+    print(f"  {COLOR_GREEN}✓ MindOS Paradise {ver}{COLOR_RESET}")
+
+
+def is_live_session():
+    try:
+        return os.path.exists("/run/live/medium") or "boot=live" in open("/proc/cmdline").read().split()
+    except OSError:
+        return False
+
+
+def offline_scheduled():
+    return os.path.islink(SYSTEM_UPDATE_LINK) and os.path.realpath(SYSTEM_UPDATE_LINK) == os.path.realpath(OFFLINE_DIR)
+
+
+def check_updates(args):
+    """mindpkg check [--json] [--refresh]: bekleyen güncellemeleri listeler (yetki gerektirmez)"""
+    if os.geteuid() == 0 and "--refresh" in args:
+        update_repos()
+        subprocess.run(["apt-get", "update", "-qq"], env={**os.environ, **APT_ENV}, check=False)
+    else:
+        fetch_meta_documents()
+    rel = latest_release()
+    mp = latest_mindpkg_release()
+    comps = pending_components()
+    apt_names = apt_pending()
+    minds = pending_mind_packages()
+    last = None
+    try:
+        with open(OFFLINE_RESULT, encoding="utf-8") as f:
+            last = json.load(f)
+    except Exception:
+        pass
+    cur_rel = installed_release()
+    info = {
+        "release": {"installed": cur_rel, "latest": rel,
+                    "newer": bool(rel and is_newer(str(rel["version"]), cur_rel))},
+        "mindpkg": {"installed": VERSION, "latest": mp["version"] if mp else VERSION,
+                    "newer": bool(mp and is_newer(str(mp["version"]), VERSION))},
+        "components": [{"name": n, "installed": c, "version": str(e["version"])} for n, e, c in comps],
+        "debian": {"count": len(apt_names), "names": apt_names[:200]},
+        "mind": [{"name": n, "installed": full_version(o), "version": full_version(nw)} for n, o, nw in minds],
+        "scheduled": offline_scheduled(),
+        "live": is_live_session(),
+        "last": last,
+    }
+    info["pending"] = len(comps) + len(apt_names) + len(minds) + int(info["mindpkg"]["newer"])
+    if "--json" in args:
+        print(json.dumps(info, ensure_ascii=False))
+        return
+    print(f"MindOS Paradise {cur_rel}" + (f"  →  {rel['version']} hazır" if info["release"]["newer"] else ""))
+    if info["mindpkg"]["newer"]:
+        print(f"  • mindpkg {VERSION} → {info['mindpkg']['latest']}")
+    for c in info["components"]:
+        print(f"  • {c['name']} {c['installed'] or '(yeni)'} → {c['version']}")
+    for m in info["mind"]:
+        print(f"  • {m['name']} {m['installed']} → {m['version']}")
+    if apt_names:
+        print(f"  • {len(apt_names)} Debian paketi")
+    print(f"{COLOR_GREEN}✓ Sistem güncel.{COLOR_RESET}" if not info["pending"] else
+          f"Kurmak için: {COLOR_BOLD}sudo mindpkg upgrade --offline --reboot{COLOR_RESET} (yeniden başlatarak) "
+          f"ya da {COLOR_BOLD}sudo mindpkg upgrade{COLOR_RESET}")
+
+
+# ------------------------------------------------------------------------------
+# Yeniden başlatarak güncelleme (systemd çevrimdışı güncelleme, systemd.offline-updates(7))
+#   1) mindpkg upgrade --offline : her şey indirilir ve doğrulanır, /system-update işareti konur
+#   2) yeniden başlatınca system-update.target'ta mindos-system-update.service -> mindpkg offline-apply
+#      Plymouth "MindOS sistemi güncelleniyor" ekranında ilerleme gösterir, bitince yeniden başlatır
+# ------------------------------------------------------------------------------
+OFFLINE_UNIT = "/usr/lib/systemd/system/mindos-system-update.service"
+
+
+def cancel_offline(quiet=False):
+    if offline_scheduled():
+        os.unlink(SYSTEM_UPDATE_LINK)
+    shutil.rmtree(OFFLINE_DIR, ignore_errors=True)
+    if not quiet:
+        print(f"{COLOR_GREEN}✓ Bekleyen güncelleme iptal edildi.{COLOR_RESET}")
+
+
+def prepare_offline(args):
+    """Güncellemeleri indirir, doğrular ve bir sonraki açılışta kurulmak üzere hazırlar"""
+    if is_live_session():
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Canlı (live) oturumda sistem güncellemesi kurulamaz; önce MindOS'u diske kurun.")
+        sys.exit(1)
+    if os.path.lexists(SYSTEM_UPDATE_LINK) and not offline_scheduled():
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Başka bir araç zaten çevrimdışı güncelleme hazırlamış ({SYSTEM_UPDATE_LINK}).")
+        sys.exit(1)
+    cancel_offline(quiet=True)
+    debs_dir = Path(OFFLINE_DIR) / "debs"
+    debs_dir.mkdir(parents=True)
+    os.chmod(OFFLINE_DIR, 0o755)
+    env = {**os.environ, **APT_ENV}
+    try:
+        comps = []
+        pending = pending_components()
+        if pending:
+            print(f"{COLOR_GREEN}==>{COLOR_RESET} MindOS sistem bileşenleri indiriliyor...")
+        for name, e, cur in pending:
+            print(f"  • {COLOR_BOLD}{name}{COLOR_RESET} {cur or '(yeni)'} → {e['version']}")
+            deb = fetch_component(name, e, debs_dir)
+            comps.append({"name": name, "version": str(e["version"]), "deb": str(deb)})
+            print(f"    {COLOR_GREEN}✓ indirildi, imza doğrulandı{COLOR_RESET}")
+
+        print(f"{COLOR_GREEN}==>{COLOR_RESET} Debian paketleri denetleniyor (apt)...")
+        ensure_firmware_backports()
+        subprocess.run(["apt-get", "update", "-qq"], env=env, check=False)
+        if comps:  # bileşenlerin yeni bağımlılıkları da önceden insin
+            r = subprocess.run(["apt-get", "install", "-d", "-y", *APT_OPTS, *[c["deb"] for c in comps]], env=env)
+            if r.returncode != 0:
+                raise ValueError(f"bileşen bağımlılıkları indirilemedi (apt-get {r.returncode})")
+        apt_names = apt_pending()
+        if apt_names:
+            print(f"  {len(apt_names)} paket indiriliyor...")
+            r = subprocess.run(["apt-get", "-d", "-y", *APT_OPTS, "--with-new-pkgs", "upgrade"], env=env)
+            if r.returncode != 0:
+                raise ValueError(f"Debian paketleri indirilemedi (apt-get {r.returncode})")
+        else:
+            print(f"  {COLOR_GREEN}✓{COLOR_RESET} Debian paketleri güncel.")
+
+        minds = []
+        for name, old, new in pending_mind_packages():
+            minds.append({"name": name, "file": str(fetch_verified(name, new))})
+    except (Exception, SystemExit) as e:
+        cancel_offline(quiet=True)
+        print(f"{COLOR_RED}Hata:{COLOR_RESET} Güncelleme hazırlanamadı: {e}")
+        sys.exit(1)
+
+    total = len(comps) + len(apt_names) + len(minds)
+    if total == 0:
+        cancel_offline(quiet=True)
+        mark_release_installed()
+        print(f"\n{COLOR_GREEN}✓ Sistem güncel, kurulacak bir şey yok.{COLOR_RESET}")
+        return
+    rel = latest_release()
+    plan = {"created": int(__import__("time").time()), "components": comps, "debian": len(apt_names),
+            "mind": minds, "release": str(rel["version"]) if rel else None}
+    with open(Path(OFFLINE_DIR) / "plan.json", "w", encoding="utf-8") as f:
+        json.dump(plan, f, ensure_ascii=False, indent=1)
+    os.symlink(OFFLINE_DIR, SYSTEM_UPDATE_LINK)
+    print(f"\n{COLOR_GREEN}✓ Güncellemeler hazır:{COLOR_RESET} {len(comps)} MindOS bileşeni, {len(apt_names)} Debian paketi, "
+          f"{len(minds)} .mind paketi.")
+    print("  Bilgisayar yeniden başlatılınca kurulacak.")
+    if "--reboot" in args:
+        print("  Yeniden başlatılıyor...")
+        subprocess.run(["systemctl", "reboot"], check=False)
+
+
+def ui_lang():
+    for f in ("/etc/locale.conf", "/etc/default/locale"):
+        try:
+            for line in open(f, encoding="utf-8"):
+                if line.startswith("LANG="):
+                    return "tr" if line.split("=", 1)[1].strip().strip('"').startswith("tr") else "en"
+        except OSError:
+            continue
+    return "en"
+
+
+BOOT_TEXTS = {
+    "prep": ("Hazırlanıyor", "Preparing"),
+    "comp": ("MindOS bileşenleri kuruluyor ({i}/{n})", "Installing MindOS components ({i}/{n})"),
+    "deb": ("Paketler güncelleniyor ({i}/{n})", "Updating packages ({i}/{n})"),
+    "mind": ("Uygulamalar güncelleniyor ({i}/{n})", "Updating apps ({i}/{n})"),
+    "fin": ("Son işlemler yapılıyor", "Finishing"),
+    "ok": ("Güncelleme tamamlandı, yeniden başlatılıyor", "Update complete, restarting"),
+    "fail": ("Bazı güncellemeler kurulamadı, yeniden başlatılıyor", "Some updates failed, restarting"),
+}
+
+
+class BootProgress:
+    """Plymouth güncelleme ekranı: ilerleme çubuğu ve altında durum yazısı"""
+
+    def __init__(self, total_units):
+        self.total = max(total_units, 1)
+        self.lang = 0 if ui_lang() == "tr" else 1
+        self.last = None
+        self.on = bool(shutil.which("plymouth")) and self.ping()
+        if self.on:
+            self.restart_from_root()
+        self.ply("change-mode", "--updates")
+
+    @staticmethod
+    def ping():
+        return subprocess.run(["plymouth", "--ping"], stderr=subprocess.DEVNULL).returncode == 0
+
+    def restart_from_root(self):
+        """Açılışta plymouthd initramfs'ten başlar; yazı tipleri diske geçişte (switch_root) silindiği
+        için metinler kutucuk çıkar. Ekran korunarak plymouthd diskten, dile uygun temayla yeniden açılır."""
+        import time
+        theme = "mindos-update-tr" if self.lang == 0 else "mindos-update-en"
+        if not (os.path.exists(f"/usr/share/plymouth/themes/{theme}/{theme}.plymouth") and shutil.which("plymouthd")):
+            return
+        try:
+            cmdline = open("/proc/cmdline").read().strip()
+        except OSError:
+            cmdline = "quiet splash"
+        self.ply("quit", "--retain-splash")
+        for _ in range(50):
+            if not self.ping():
+                break
+            time.sleep(0.1)
+        subprocess.run(["plymouthd", "--mode=updates", "--attach-to-session", "--pid-file=/run/plymouth/pid",
+                        f"--kernel-command-line={cmdline} plymouth.splash={theme}"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(50):
+            if self.ping():
+                break
+            time.sleep(0.1)
+        self.on = self.ping()
+        self.ply("show-splash")
+
+    def ply(self, *a):
+        if self.on:
+            subprocess.run(["plymouth", *a], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def show(self, units, key, **fmt):
+        pct = max(0, min(100, int(units * 100 / self.total)))
+        text = BOOT_TEXTS[key][self.lang].format(**fmt)
+        if (pct, text) == self.last:
+            return
+        self.last = (pct, text)
+        print(f"[{pct:3d}%] {text}", flush=True)
+        self.ply("system-update", f"--progress={pct}")
+        self.ply("display-message", f"--text={'%' + str(pct) if self.lang == 0 else str(pct) + '%'}  ·  {text}")
+
+
+def run_apt_progress(argv, on_progress):
+    """apt-get'i çalıştırır; APT::Status-Fd'den gelen paket ilerlemesini on_progress(oran, paket) ile bildirir"""
+    r, w = os.pipe()
+    proc = subprocess.Popen([argv[0], "-o", f"APT::Status-Fd={w}", *argv[1:]], pass_fds=(w,),
+                            env={**os.environ, **APT_ENV})
+    os.close(w)
+    with os.fdopen(r, errors="replace") as f:
+        for line in f:
+            m = re.match(r"pmstatus:(.+?):(\d+(?:\.\d+)?):", line)
+            if m:
+                on_progress(float(m.group(2)) / 100, m.group(1).split(":")[0])
+    return proc.wait()
+
+
+def apply_offline():
+    """Açılışta (system-update.target) hazırlanmış güncellemeyi kurar ve yeniden başlatır"""
+    check_root()
+    if not offline_scheduled():
+        print("mindpkg: hazırlanmış bir MindOS güncellemesi yok.")
+        return
+    os.unlink(SYSTEM_UPDATE_LINK)  # yarıda kesilse bile bir sonraki açılış normal olsun (döngü olmasın)
+    import time
+    errors = []
+    try:
+        with open(Path(OFFLINE_DIR) / "plan.json", encoding="utf-8") as f:
+            plan = json.load(f)
+    except Exception as e:
+        plan = {"components": [], "debian": 0, "mind": [], "release": None}
+        errors.append(f"plan okunamadı: {e}")
+    comps, n_deb, minds = plan.get("components", []), int(plan.get("debian", 0)), plan.get("mind", [])
+    # kernel gibi bileşenler (initramfs, modüller) tek bir Debian paketinden çok daha uzun sürer
+    w_comp, w_mind = 6, 2
+    total = len(comps) * w_comp + n_deb + len(minds) * w_mind + 1
+    ui = BootProgress(total)
+    ui.show(0, "prep")
+    base = 0
+
+    if comps:
+        seen = set()
+
+        def comp_progress(frac, pkg):
+            seen.add(pkg)
+            ui.show(base + frac * len(comps) * w_comp, "comp", i=min(len(seen), len(comps)), n=len(comps))
+        # yerel .deb ile --no-download apt'de iç hataya düşüyor; bağımlılıklar zaten önbellekte,
+        # ağ yoksa beklememesi için zaman aşımları kısa tutulur
+        rc = run_apt_progress(["apt-get", "install", "-y", *APT_OPTS, *APT_OFFLINE_NET,
+                               *[c["deb"] for c in comps]], comp_progress)
+        if rc != 0:
+            errors.append(f"MindOS bileşenleri kurulamadı (apt-get {rc})")
+        elif any(c["name"].startswith("linux-image-") for c in comps):
+            cleanup_old_kernels()
+        base += len(comps) * w_comp
+
+    if n_deb:
+        seen = set()
+
+        def deb_progress(frac, pkg):
+            seen.add(pkg)
+            ui.show(base + frac * n_deb, "deb", i=min(len(seen), n_deb), n=n_deb)
+        # hazırlıktan sonra apt listeleri tazelendiyse indirilmemiş paketler bir sonraki güncellemeye kalır
+        rc = run_apt_progress(["apt-get", "--no-download", "--ignore-missing", "-y", *APT_OPTS, "--with-new-pkgs",
+                               "upgrade"], deb_progress)
+        if rc != 0:
+            errors.append(f"Debian paketleri yükseltilemedi (apt-get {rc})")
+        base += n_deb
+
+    for i, m in enumerate(minds, 1):
+        ui.show(base, "mind", i=i, n=len(minds))
+        rec = Path(INSTALLED_DIR) / f"{m.get('name')}.json"
+        try:
+            with open(rec, encoding="utf-8") as f:
+                old = json.load(f)
+            install_mind_upgrade(m["name"], old, m["file"])
+        except (Exception, SystemExit) as e:
+            errors.append(f"{m.get('name')}: {e}")
+        base += w_mind
+
+    ui.show(base, "fin")
+    if errors and shutil.which("dpkg"):
+        subprocess.run(["dpkg", "--configure", "-a"], env={**os.environ, **APT_ENV})
+    run_system_triggers()
+    mark_release_installed()
+    result = {"ok": not errors, "time": int(time.time()), "release": installed_release(), "errors": errors,
+              "components": [f"{c['name']} {c['version']}" for c in comps], "debian": n_deb,
+              "mind": [m.get("name") for m in minds], "log": OFFLINE_LOG}
+    with open(OFFLINE_RESULT + ".new", "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False, indent=1)
+    os.chmod(OFFLINE_RESULT + ".new", 0o644)
+    os.replace(OFFLINE_RESULT + ".new", OFFLINE_RESULT)
+    shutil.rmtree(OFFLINE_DIR, ignore_errors=True)
+    ui.show(total, "ok" if not errors else "fail")
+    print("\n".join(errors) if errors else "MindOS güncellemesi tamamlandı.", flush=True)
+    time.sleep(3)
+    subprocess.run(["systemctl", "reboot", "--no-block"], check=False)
+
+
+def upgrade_all(args):
+    """mindpkg upgrade: önce mindpkg'nin kendisi, sonra .mind paketleri, sonra sistem paketleri"""
+    check_root()
+    if "--resumed" not in args:  # yeni sürümle devam ediliyorsa indeksler zaten taze
+        update_repos()
+    if "--no-self-update" not in args:
+        self_update()
+    if "--offline" in args:
+        if os.path.exists(OFFLINE_UNIT) and shutil.which("apt-get") and is_mindos_paradise():
+            prepare_offline(args)
+            return
+        print(f"{COLOR_YELLOW}Yeniden başlatarak güncelleme bu sistemde yok; güncelleme şimdi kuruluyor.{COLOR_RESET}")
+    if "--no-apt" not in args:
+        upgrade_system_components()
+    upgrade_mind_packages()
+    if "--no-apt" not in args:
+        upgrade_system_packages()
+        mark_release_installed()
+    run_system_triggers()
+    print(f"\n{COLOR_GREEN}✓ Yükseltme tamamlandı.{COLOR_RESET}")
+
+
+def main():
+    # Çıktı bir boruya/dosyaya giderken de mesajlar apt çıktısıyla doğru sırada görünsün (Mind Arc paneli)
+    sys.stdout.reconfigure(line_buffering=True)
+    if not (len(sys.argv) > 2 and sys.argv[1] == "check" and "--json" in sys.argv[2:]):
+        print_banner()
+    ensure_directories()
+
+    if len(sys.argv) < 2:
+        print(f"{COLOR_BOLD}Kullanım:{COLOR_RESET} mindpkg <komut> [seçenekler] [argümanlar...]\n")
+        print("Temel Komutlar:")
+        print(f"  {COLOR_GREEN}install, add, i{COLOR_RESET} <paket | dosya.mind>     Paket kurar (Depodan veya yerel)")
+        print(f"  {COLOR_GREEN}remove, rm, del{COLOR_RESET} <paket>                         Paket kaldırır")
+        print(f"  {COLOR_GREEN}update, sync, up{COLOR_RESET}                              Depoları günceller")
+        print(f"  {COLOR_GREEN}upgrade{COLOR_RESET} [--no-apt]                              mindpkg'yi ve tüm paketleri yükseltir")
+        print(f"  {COLOR_GREEN}upgrade --offline{COLOR_RESET} [--reboot]                  Güncellemeyi indirir, yeniden başlatınca kurar")
+        print(f"  {COLOR_GREEN}check{COLOR_RESET} [--json]                                  Bekleyen güncellemeleri gösterir")
+        print(f"  {COLOR_GREEN}offline-cancel{COLOR_RESET}                                Hazırlanmış güncellemeyi iptal eder")
+        print(f"  {COLOR_GREEN}search, s{COLOR_RESET} <kelime>                              Paket arar")
+        print(f"  {COLOR_GREEN}list, ls{COLOR_RESET}                                      Kurulu paketleri listeler")
+        print(f"  {COLOR_GREEN}info, show{COLOR_RESET} <paket>                              Paket bilgisini gösterir")
+        print(f"  {COLOR_GREEN}build{COLOR_RESET} <kaynak_dizini>                         .mind paketi derler")
+        print(f"  {COLOR_GREEN}clean{COLOR_RESET}                                         Önbelleği temizler")
+        print(f"  {COLOR_GREEN}version{COLOR_RESET}                                       Sürümü gösterir")
+        sys.exit(0)
+
+    cmd = sys.argv[1].lower()
+    args = sys.argv[2:]
+    if cmd in ["install", "add", "i", "remove", "rm", "del", "uninstall", "update", "sync", "up",
+               "upgrade", "full-upgrade", "dist-upgrade", "clean", "gc", "check", "offline-apply",
+               "offline-cancel"]:
+        acquire_lock()
+
+    if cmd in ["install", "add", "i"]:
+        if not args:
+            print(f"{COLOR_RED}Hata:{COLOR_RESET} Kurulacak paket adı belirtilmedi.")
+            sys.exit(1)
+        for target in args:
+            if target.endswith(".mind"):  # yerel paket dosyası
+                install_mind_file(target)
+            elif target.endswith(".deb"):  # yerel .deb: .mind'a dönüştürülüp kurulur
+                install_deb_file(target)
+            else:
+                install_from_repo_or_name(target)
+
+    elif cmd in ["remove", "rm", "del", "uninstall"]:
+        if not args:
+            print(f"{COLOR_RED}Hata:{COLOR_RESET} Kaldırılacak paket adı belirtilmedi.")
+            sys.exit(1)
+        for pkg in args:
+            remove_package(pkg)
+
+    elif cmd in ["update", "sync", "up"]:
+        update_repos()
+
+    elif cmd in ["upgrade", "full-upgrade", "dist-upgrade"]:
+        upgrade_all(args)
+
+    elif cmd == "check":
+        check_updates(args)
+
+    elif cmd == "offline-apply":  # mindos-system-update.service çağırır
+        apply_offline()
+
+    elif cmd == "offline-cancel":
+        check_root()
+        cancel_offline()
+
+    elif cmd == "firmware-repo":  # ISO derlemesi ve mindos-apps kurulumu çağırır
+        check_root()
+        ensure_firmware_backports()
+
+    elif cmd in ["version", "--version", "-v"]:
+        print(VERSION)
+
+    elif cmd in ["search", "s", "find"]:
+        if not args:
+            print(f"{COLOR_RED}Hata:{COLOR_RESET} Aranacak kelime belirtilmedi.")
+            sys.exit(1)
+        search_repos(" ".join(args))
+
+    elif cmd in ["list", "ls"]:
+        list_installed()
+
+    elif cmd in ["info", "show"]:
+        if not args:
+            print(f"{COLOR_RED}Hata:{COLOR_RESET} Paket adı belirtilmedi.")
+            sys.exit(1)
+        info_package(args[0])
+
+    elif cmd in ["build", "pkg-build"]:
+        src = args[0] if args else "."
+        out = args[1] if len(args) > 1 else None
+        build_package(src, out)
+
+    elif cmd in ["clean", "gc"]:
+        check_root()
+        shutil.rmtree(CACHE_DIR, ignore_errors=True)
+        ensure_directories()
+        print(f"{COLOR_GREEN}✓ Önbellek temizlendi.{COLOR_RESET}")
+
+    else:
+        print(f"{COLOR_RED}Bilinmeyen komut:{COLOR_RESET} {cmd}")
+        print("Yardım için: 'mindpkg' yazın.")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(f"\n\n{COLOR_YELLOW}⚠ İşlem kullanıcı tarafından iptal edildi.{COLOR_RESET}")
+        sys.exit(130)
