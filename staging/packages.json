@@ -2,7 +2,7 @@
  "repository": "MindOS Sunrise Official Package Repository (aarch64)",
  "architecture": "aarch64",
  "version": "1.0",
- "total_packages": 39892,
+ "total_packages": 39992,
  "packages": [
   {
    "name": "0ad",
@@ -7055,6 +7055,23 @@
    "size": 63157,
    "chunk_tag": "v1.0-chunk-06",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-06/android-libziparchive-1.34.0.5-12-1-aarch64.mind"
+  },
+  {
+   "name": "android-platform-system-core-headers",
+   "version": "1:34.0.5-12",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Shared headers in AOSP repository platform/system/core",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "android-platform-system-core-headers-1.34.0.5-12-1-aarch64.mind",
+   "sha256": "9c82bb2ef05d37fc6f960022ced731414b664bf892eb606cb01c32dcc1d3caed",
+   "size": 111433,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/android-platform-system-core-headers-1.34.0.5-12-1-aarch64.mind"
   },
   {
    "name": "android-platform-tools-base",
@@ -14207,6 +14224,28 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-27/asterisk-core-sounds-en-wav-1.6.1-1-1-aarch64.mind"
   },
   {
+   "name": "asterisk-core-sounds-es",
+   "version": "1.6.1-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "asterisk PBX sound files - Spanish",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "asterisk-core-sounds-es-gsm | asterisk-core-sounds-es-g722 | asterisk-core-sounds-es-wav"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "asterisk-core-sounds-es-1.6.1-1-1-aarch64.mind",
+   "sha256": "526257fe8e40d39cce5cce98f1e65b8617014848729434c9dd3a244a5b540778",
+   "size": 26436,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/asterisk-core-sounds-es-1.6.1-1-1-aarch64.mind"
+  },
+  {
    "name": "asterisk-core-sounds-es-gsm",
    "version": "1.6.1-1",
    "release": "1",
@@ -16934,6 +16973,30 @@
    "size": 333540,
    "chunk_tag": "v1.0-chunk-23",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-23/autodock-vina-1.2.7-1-1-aarch64.mind"
+  },
+  {
+   "name": "autoflake",
+   "version": "2.3.1-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Removes unused imports and unused variables in Python code",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "python3-pyflakes",
+    "python3-tomli | python3-supported-min (>= 3.11)",
+    "python3:any"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "autoflake-2.3.1-2-1-aarch64.mind",
+   "sha256": "5def5e8516d7b122db8c0081aebaca314cd868bce51e3904939678399982e9f0",
+   "size": 26596,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/autoflake-2.3.1-2-1-aarch64.mind"
   },
   {
    "name": "autofs",
@@ -19808,6 +19871,35 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-24/bacula-director-pgsql-15.0.3-3-1-aarch64.mind"
   },
   {
+   "name": "bacula-director-sqlite3",
+   "version": "15.0.3-3",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "network backup service - SQLite 3 storage for Director",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "bacula-common-sqlite3 (<< 15.0.3-3.1~)",
+    "bacula-common-sqlite3 (>= 15.0.3-3)",
+    "dbconfig-sqlite3 | dbconfig-no-thanks",
+    "file",
+    "sqlite3",
+    "debconf (>= 0.5) | debconf-2.0"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "preinst",
+    "postinst",
+    "prerm",
+    "postrm"
+   ],
+   "filename": "bacula-director-sqlite3-15.0.3-3-1-aarch64.mind",
+   "sha256": "71e23734b9afce7f01341e8a2ad0ef3501cddb09da02834155cafa07b72a888d",
+   "size": 168971,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/bacula-director-sqlite3-15.0.3-3-1-aarch64.mind"
+  },
+  {
    "name": "bacula-doc",
    "version": "15.0.3+debian1-1",
    "release": "1",
@@ -20689,6 +20781,29 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-38/barman-cli-3.13.3-1-1-aarch64.mind"
   },
   {
+   "name": "barman-cli-cloud",
+   "version": "3.13.3-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Cloud client utilities for the integration of Barman in PostgreSQL clusters",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "python3-barman (= 3.13.3-1)",
+    "python3-pkg-resources",
+    "rsync",
+    "python3:any",
+    "python3-boto3"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "barman-cli-cloud-3.13.3-1-1-aarch64.mind",
+   "sha256": "b8bdccf044bc10a78757219e06385eaf6661d69e24ac5701520d8f3908817d00",
+   "size": 24262,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/barman-cli-cloud-3.13.3-1-1-aarch64.mind"
+  },
+  {
    "name": "barrage",
    "version": "1.0.7-1",
    "release": "1",
@@ -21467,6 +21582,23 @@
    "size": 5073,
    "chunk_tag": "v1.0-chunk-40",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-40/bazel-platforms-0.0.2-2-1-aarch64.mind"
+  },
+  {
+   "name": "bazel-rules-cc",
+   "version": "0.0.4-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Starlark implementation of C++ rules in Bazel",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "bazel-rules-cc-0.0.4-2-1-aarch64.mind",
+   "sha256": "2851c151865acef130604f44015a1ad31b043be20fe0b8c95ac6a6cc77e5ca14",
+   "size": 135552,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/bazel-rules-cc-0.0.4-2-1-aarch64.mind"
   },
   {
    "name": "bb",
@@ -25398,6 +25530,31 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-25/bitlbee-common-3.6-1.5-1-aarch64.mind"
   },
   {
+   "name": "bitlbee-libpurple",
+   "version": "3.6-1.5",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "IRC to other chat networks gateway (using libpurple)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "bitlbee-common (= 3.6-1.5)",
+    "libc6 (>= 2.38)",
+    "libgcrypt20 (>= 1.11.0)",
+    "libglib2.0-0t64 (>= 2.76.0)",
+    "libgnutls30t64 (>= 3.8.1)",
+    "libpurple0t64 (>= 2.6.0)",
+    "debianutils (>= 1.16)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "bitlbee-libpurple-3.6-1.5-1-aarch64.mind",
+   "sha256": "1d43efaec2f655344ef5f0b620812eebe2478ef752b5280b328182e3411bcd88",
+   "size": 194953,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/bitlbee-libpurple-3.6-1.5-1-aarch64.mind"
+  },
+  {
    "name": "bitseq",
    "version": "0.7.5+dfsg-6+b2",
    "release": "1",
@@ -25880,6 +26037,30 @@
    "size": 16749,
    "chunk_tag": "v1.0-chunk-12",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-12/blends-common-0.7.10-1-aarch64.mind"
+  },
+  {
+   "name": "blends-dev",
+   "version": "0.7.10",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Debian Pure Blends common files for developing metapackages",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "debconf",
+    "debhelper",
+    "make | build-essential",
+    "python3",
+    "python3-apt",
+    "python3-blends"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "blends-dev-0.7.10-1-aarch64.mind",
+   "sha256": "eaa1003a82f7d5b2b3c660af42c8c35e33f345672f25cd093f1c6a8daecc2fff",
+   "size": 29582,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/blends-dev-0.7.10-1-aarch64.mind"
   },
   {
    "name": "blends-doc",
@@ -48855,6 +49036,40 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-08/colordiff-1.0.21-1-1-aarch64.mind"
   },
   {
+   "name": "colorhug-client",
+   "version": "0.2.8-6",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Tools for the Hughski Colorimeter",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libcairo2 (>= 1.2.4)",
+    "libcanberra-gtk3-0 (>= 0.25)",
+    "libcanberra0 (>= 0.2)",
+    "libcolord-gtk1t64 (>= 0.1.24)",
+    "libcolord2 (>= 1.4.3)",
+    "libcolorhug2 (>= 1.2.10)",
+    "libgdk-pixbuf-2.0-0 (>= 2.25.2)",
+    "libglib2.0-0t64 (>= 2.80.0)",
+    "libgtk-3-0t64 (>= 3.11.5)",
+    "libgusb2 (>= 0.2.2)",
+    "libpango-1.0-0 (>= 1.18.0)",
+    "libpangocairo-1.0-0 (>= 1.14.0)",
+    "libsoup-2.4-1 (>= 2.33.92)",
+    "dconf-gsettings-backend | gsettings-backend",
+    "librsvg2-common"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "colorhug-client-0.2.8-6-1-aarch64.mind",
+   "sha256": "45ea483e028e35053b69e233198a3a3106b75fed0e07acd8f84e92b26b1d685c",
+   "size": 753899,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/colorhug-client-0.2.8-6-1-aarch64.mind"
+  },
+  {
    "name": "colorize",
    "version": "0.66-1+b1",
    "release": "1",
@@ -50011,6 +50226,34 @@
    "size": 20901,
    "chunk_tag": "v1.0-chunk-18",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-18/condor-upgrade-checks-23.9.6+dfsg-2.1-1-aarch64.mind"
+  },
+  {
+   "name": "confclerk",
+   "version": "0.7.2-1+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "offline conference schedule application",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libgcc-s1 (>= 3.0)",
+    "libqt5core5t64 (>= 5.15.1)",
+    "libqt5gui5t64 (>= 5.11.0~rc1) | libqt5gui5-gles (>= 5.11.0~rc1)",
+    "libqt5network5t64 (>= 5.14.1)",
+    "libqt5sql5t64 (>= 5.0.2)",
+    "libqt5widgets5t64 (>= 5.11.0~rc1)",
+    "libqt5xml5t64 (>= 5.0.2)",
+    "libstdc++6 (>= 14)",
+    "libqt5sql5-sqlite"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "confclerk-0.7.2-1+b1-1-aarch64.mind",
+   "sha256": "c7a4809cce413c9975b4c211618d59248816f4645b8fe3f3bc3de75b85a2e7de",
+   "size": 304462,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/confclerk-0.7.2-1+b1-1-aarch64.mind"
   },
   {
    "name": "confget",
@@ -51970,6 +52213,44 @@
    "size": 305736,
    "chunk_tag": "v1.0-chunk-17",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-17/courier-imap-5.2.11+1.4.1-3+deb13u2-1-aarch64.mind"
+  },
+  {
+   "name": "courier-mta",
+   "version": "1.4.1-3+deb13u2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Courier mail server - ESMTP daemon",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "init-system-helpers (>= 1.54~)",
+    "courier-base (= 1.4.1-3+deb13u2)",
+    "debconf",
+    "libnet-cidr-perl",
+    "wget",
+    "debconf (>= 0.5) | debconf-2.0",
+    "courier-authlib (>= 0.71)",
+    "libc6 (>= 2.38)",
+    "libcourier-unicode8 (>= 2.3.1)",
+    "libgcc-s1 (>= 3.0)",
+    "libgdbm6t64 (>= 1.16)",
+    "libidn2-0 (>= 2.0.0)",
+    "libperl5.40 (>= 5.40.0)",
+    "libstdc++6 (>= 13.1)",
+    "perl:any"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "preinst",
+    "postinst",
+    "prerm",
+    "postrm"
+   ],
+   "filename": "courier-mta-1.4.1-3+deb13u2-1-aarch64.mind",
+   "sha256": "e85dcb45b664af0c5a41168b80c716141498d4482dad2be7f90618e89a738cb7",
+   "size": 1006593,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/courier-mta-1.4.1-3+deb13u2-1-aarch64.mind"
   },
   {
    "name": "courier-pop",
@@ -55088,6 +55369,23 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-28/crossfire-client-images-1.70.0-2-1-aarch64.mind"
   },
   {
+   "name": "crossfire-common",
+   "version": "1.75.0-8.1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Architecture independent common files for Crossfire server",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "crossfire-common-1.75.0-8.1-1-aarch64.mind",
+   "sha256": "e3e390de497179925ea43743fdcab3d991d0d76a1ea1a668b1a64690ac75bef5",
+   "size": 3920567,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/crossfire-common-1.75.0-8.1-1-aarch64.mind"
+  },
+  {
    "name": "crossgrader",
    "version": "0.0.3+nmu4",
    "release": "1",
@@ -58099,6 +58397,31 @@
    "size": 282371,
    "chunk_tag": "v1.0-chunk-20",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-20/cyrus-imapd-3.10.2-1+deb13u2-1-aarch64.mind"
+  },
+  {
+   "name": "cyrus-nntpd",
+   "version": "3.10.2-1+deb13u2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Cyrus mail system - NNTP support",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "cyrus-common (= 3.10.2-1+deb13u2)",
+    "libc6 (>= 2.38)",
+    "libcom-err2 (>= 1.43.9)",
+    "libsasl2-2 (>= 2.1.28+dfsg1)",
+    "libssl3t64 (>= 3.0.0)",
+    "libwrap0 (>= 7.6-4~)",
+    "zlib1g (>= 1:1.1.4)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "cyrus-nntpd-3.10.2-1+deb13u2-1-aarch64.mind",
+   "sha256": "975bac2593b6bbab4d2b7ef93e46ed8af7ef2734406fa70edeeabd4eb28cab47",
+   "size": 178164,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/cyrus-nntpd-3.10.2-1+deb13u2-1-aarch64.mind"
   },
   {
    "name": "cyrus-pop3d",
@@ -66020,6 +66343,25 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-03/dh-strip-nondeterminism-1.14.1-2-1-aarch64.mind"
   },
   {
+   "name": "dh-sysuser",
+   "version": "1.6.0",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "alternative debhelper addon to create system users",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "perl:any"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "dh-sysuser-1.6.0-1-aarch64.mind",
+   "sha256": "023bdd7d330f8ea18a92341c4808706cadab935e3ea62569b1acab9483e73e0d",
+   "size": 11006,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/dh-sysuser-1.6.0-1-aarch64.mind"
+  },
+  {
    "name": "dh-vim-addon",
    "version": "0.5",
    "release": "1",
@@ -67077,6 +67419,26 @@
    "size": 278289,
    "chunk_tag": "v1.0-chunk-39",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-39/dict-freedict-eng-nld-2022.04.21-1-1-aarch64.mind"
+  },
+  {
+   "name": "dict-freedict-eng-pol",
+   "version": "2022.04.21-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "English-Polish dictionary for the dict server/client",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "postrm"
+   ],
+   "filename": "dict-freedict-eng-pol-2022.04.21-1-1-aarch64.mind",
+   "sha256": "f8a22e2236161f66335b93d15266521c68b5dccb3e943f1340db6b68c5663d7f",
+   "size": 660618,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/dict-freedict-eng-pol-2022.04.21-1-1-aarch64.mind"
   },
   {
    "name": "dict-freedict-eng-por",
@@ -70893,6 +71255,36 @@
    "size": 424016,
    "chunk_tag": "v1.0-chunk-41",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/dnstwist-0.20250130-1-1-aarch64.mind"
+  },
+  {
+   "name": "dnsviz",
+   "version": "0.11.1-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Tools for analyzing and visualizing DNS and DNSSEC behavior",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "python3-cryptography (>= 36.0.0)",
+    "python3-dnspython (>= 1.13.0~)",
+    "python3-pygraphviz (>= 1.4~)",
+    "python3:any",
+    "dns-root-data",
+    "libjs-jquery",
+    "libjs-jquery-ui",
+    "libjs-jquery-ui-theme-redmond",
+    "libjs-raphael"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "dnsviz-0.11.1-1-1-aarch64.mind",
+   "sha256": "e24cf30935ff518018bc39b8a05eec3753ad387043dd7df27fa90db7508bb397",
+   "size": 1153636,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/dnsviz-0.11.1-1-1-aarch64.mind"
   },
   {
    "name": "dnswalk",
@@ -76889,6 +77281,26 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-30/e2guardian-5.5.8-1-1-aarch64.mind"
   },
   {
+   "name": "e2ps",
+   "version": "4.34-6+b2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Convert plain text into PostScript",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libpaper2 (>= 2.2.5)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "e2ps-4.34-6+b2-1-aarch64.mind",
+   "sha256": "dfb2ff5c05500d83df47f4c3b4896fbf7bc04b67351c3c0ac6a8c9a133076e0c",
+   "size": 48515,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/e2ps-4.34-6+b2-1-aarch64.mind"
+  },
+  {
    "name": "e2tools",
    "version": "0.1.2-1",
    "release": "1",
@@ -80307,6 +80719,29 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-22/elogind-255.17-1debian2-1-aarch64.mind"
   },
   {
+   "name": "elpa-a",
+   "version": "1.0.0-4",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "functions for dealing with associative structures",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "dh-elpa-helper",
+    "emacsen-common"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "elpa-a-1.0.0-4-1-aarch64.mind",
+   "sha256": "c17d2055907aabd7ad9bae2016c93be1d7d3f255ed811d4be64790349bd0288e",
+   "size": 10198,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/elpa-a-1.0.0-4-1-aarch64.mind"
+  },
+  {
    "name": "elpa-ace-popup-menu",
    "version": "0.2.1-5",
    "release": "1",
@@ -80452,6 +80887,29 @@
    "size": 15188,
    "chunk_tag": "v1.0-chunk-11",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-11/elpa-apache-mode-2.2.0-7-1-aarch64.mind"
+  },
+  {
+   "name": "elpa-apiwrap",
+   "version": "0.5-6",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "api-wrapping macros",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "dh-elpa-helper",
+    "emacsen-common"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "elpa-apiwrap-0.5-6-1-aarch64.mind",
+   "sha256": "a47ca37344cfce9e86ab99041b0ce6a220cbe5fa8afb594ef4f43967ee8917e9",
+   "size": 15346,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/elpa-apiwrap-0.5-6-1-aarch64.mind"
   },
   {
    "name": "elpa-async",
@@ -80801,6 +81259,30 @@
    "size": 23753,
    "chunk_tag": "v1.0-chunk-11",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-11/elpa-browse-kill-ring-2.0.0-5-1-aarch64.mind"
+  },
+  {
+   "name": "elpa-bui",
+   "version": "1.2.1-4",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Emacs Buffer interface library",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "elpa-dash (>= 2.11.0)",
+    "dh-elpa-helper",
+    "emacsen-common"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "elpa-bui-1.2.1-4-1-aarch64.mind",
+   "sha256": "083df81b2db38cb71f3ee56a202731fa1a6e842bc457ec669b8bbe0ca2d168e6",
+   "size": 30248,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/elpa-bui-1.2.1-4-1-aarch64.mind"
   },
   {
    "name": "elpa-caml",
@@ -81445,6 +81927,29 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-35/elpa-elenv-0.1.0+git20231211.94cf71e-3-1-aarch64.mind"
   },
   {
+   "name": "elpa-elfeed",
+   "version": "3.4.2-5",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Emacs Atom/RSS feed reader",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "dh-elpa-helper",
+    "emacsen-common"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "elpa-elfeed-3.4.2-5-1-aarch64.mind",
+   "sha256": "24bf777ad13d11a33d9fec05e5eb2b55bc9b088f8be224482a222365199b64ad",
+   "size": 66949,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/elpa-elfeed-3.4.2-5-1-aarch64.mind"
+  },
+  {
    "name": "elpa-elisp-refs",
    "version": "1.5-3",
    "release": "1",
@@ -81494,6 +81999,29 @@
    "size": 36821,
    "chunk_tag": "v1.0-chunk-22",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-22/elpa-elm-mode-0.20.3-6-1-aarch64.mind"
+  },
+  {
+   "name": "elpa-elpher",
+   "version": "3.6.3~git20240930.c00f2a8-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "friendly gopher and gemini client",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "dh-elpa-helper",
+    "emacsen-common"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "elpa-elpher-3.6.3.git20240930.c00f2a8-1-1-aarch64.mind",
+   "sha256": "2eae95d1e9a61d420212409b8a33eb27bfeeff1e3a14e508a9e5cbe8f78c6574",
+   "size": 60715,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/elpa-elpher-3.6.3.git20240930.c00f2a8-1-1-aarch64.mind"
   },
   {
    "name": "elpa-emacsql",
@@ -81567,6 +82095,31 @@
    "size": 125158,
    "chunk_tag": "v1.0-chunk-41",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/elpa-embark-1.1-2-1-aarch64.mind"
+  },
+  {
+   "name": "elpa-epc",
+   "version": "0.1.1-7",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "RPC stack for Emacs Lisp",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "elpa-concurrent (>= 0.3.1)",
+    "elpa-ctable (>= 0.1.2)",
+    "dh-elpa-helper",
+    "emacsen-common"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "elpa-epc-0.1.1-7-1-aarch64.mind",
+   "sha256": "ff180b3f4f4d6ee38720edc0cce76684254e098f7950d8bb83f65ecdec446d17",
+   "size": 164542,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/elpa-epc-0.1.1-7-1-aarch64.mind"
   },
   {
    "name": "elpa-epl",
@@ -84815,6 +85368,29 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-33/elpa-super-save-0.4.0-2-1-aarch64.mind"
   },
   {
+   "name": "elpa-svg-lib",
+   "version": "0.2.5+ds-3",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "SVG tags, progress bars & icons for Emacs",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "dh-elpa-helper",
+    "emacsen-common"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "elpa-svg-lib-0.2.5+ds-3-1-aarch64.mind",
+   "sha256": "5bab8b739a46821afb5a9aea5fef0090dc151342a8062d944360391855e881ca",
+   "size": 10070,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/elpa-svg-lib-0.2.5+ds-3-1-aarch64.mind"
+  },
+  {
    "name": "elpa-swiper",
    "version": "0.15.1-3",
    "release": "1",
@@ -84960,6 +85536,32 @@
    "size": 4646985,
    "chunk_tag": "v1.0-chunk-30",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-30/elpa-treemacs-3.2-1-1-aarch64.mind"
+  },
+  {
+   "name": "elpa-treemacs-magit",
+   "version": "3.2-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "tree layout file explorer for Emacs - magit support",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "elpa-treemacs (= 3.2-1)",
+    "elpa-pfuture (>= 1.3)",
+    "elpa-magit (>= 2.90.0)",
+    "dh-elpa-helper",
+    "emacsen-common"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "elpa-treemacs-magit-3.2-1-1-aarch64.mind",
+   "sha256": "0eef902e226de4e4813189521489cda7a39f55b857c7a6776c7b66d3827471df",
+   "size": 11048,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/elpa-treemacs-magit-3.2-1-1-aarch64.mind"
   },
   {
    "name": "elpa-treepy",
@@ -86116,6 +86718,38 @@
    "size": 16294,
    "chunk_tag": "v1.0-chunk-01",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-01/emacsen-common-3.0.8-1-aarch64.mind"
+  },
+  {
+   "name": "emacspeak",
+   "version": "53.0+dfsg-5",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "speech output interface to Emacs",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "adduser",
+    "debconf",
+    "emacs (>= 1:26.1~)",
+    "make",
+    "perl",
+    "tcl",
+    "tclx8.4",
+    "debconf (>= 0.5) | debconf-2.0",
+    "perl:any"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "preinst",
+    "postinst",
+    "prerm",
+    "postrm"
+   ],
+   "filename": "emacspeak-53.0+dfsg-5-1-aarch64.mind",
+   "sha256": "79434945c766258e56a7c4ef30db2e1be39554b4b1c3847813ec534802562aff",
+   "size": 19437643,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/emacspeak-53.0+dfsg-5-1-aarch64.mind"
   },
   {
    "name": "emacspeak-espeak-server",
@@ -87677,6 +88311,25 @@
    "size": 2140236,
    "chunk_tag": "v1.0-chunk-06",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-06/eom-common-1.26.1-1-1-aarch64.mind"
+  },
+  {
+   "name": "eot-utils",
+   "version": "1.1-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Tools to convert from OTF or TTF to EOT font format",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "eot-utils-1.1-2-1-aarch64.mind",
+   "sha256": "827218df3e3752be358532809e082d6070c95fc8c4677f6c0d31188f144322cb",
+   "size": 19777,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/eot-utils-1.1-2-1-aarch64.mind"
   },
   {
    "name": "eot2ttf",
@@ -96349,6 +97002,23 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-19/fcitx5-rime-5.1.10-2-1-aarch64.mind"
   },
   {
+   "name": "fcitx5-skin-nord",
+   "version": "0.0~git20210727.bdaa8fb-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Fcitx5 theme based on Nord color",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "fcitx5-skin-nord-0.0.git20210727.bdaa8fb-2-1-aarch64.mind",
+   "sha256": "700fd616f6882b64fae12df1ca21b3d5b2d2faca1f424d67ce6af54b79fb0f80",
+   "size": 6598,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/fcitx5-skin-nord-0.0.git20210727.bdaa8fb-2-1-aarch64.mind"
+  },
+  {
    "name": "fcitx5-skk",
    "version": "5.1.6-1",
    "release": "1",
@@ -96564,6 +97234,44 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-32/fcitx5-table-cantonese-5.1.7-1-1-aarch64.mind"
   },
   {
+   "name": "fcitx5-table-cantonhk",
+   "version": "5.1.7-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Flexible Input Method Framework v5 - Cantonhk table",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "fcitx5-table"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "fcitx5-table-cantonhk-5.1.7-1-1-aarch64.mind",
+   "sha256": "254a34b5c56fee82f8a8e14951ce12f388b767a113d80a2fa592e383aa4bba32",
+   "size": 299809,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/fcitx5-table-cantonhk-5.1.7-1-1-aarch64.mind"
+  },
+  {
+   "name": "fcitx5-table-compose",
+   "version": "5.1.4-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Flexible Input Method Framework v5 - Compose table",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "fcitx5-table"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "fcitx5-table-compose-5.1.4-1-1-aarch64.mind",
+   "sha256": "bc752e0ee15630cce0cb8c0c3a6b004ee2b4e012c91b37d23f9f59ec872d019b",
+   "size": 15549,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/fcitx5-table-compose-5.1.4-1-1-aarch64.mind"
+  },
+  {
    "name": "fcitx5-table-easy-large",
    "version": "5.1.7-1",
    "release": "1",
@@ -96674,6 +97382,25 @@
    "size": 48863,
    "chunk_tag": "v1.0-chunk-21",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-21/fcitx5-table-malayalam-phonetic-5.1.4-1-1-aarch64.mind"
+  },
+  {
+   "name": "fcitx5-table-quick-classic",
+   "version": "5.1.7-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Flexible Input Method Framework v5 - Quick-Classic table",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "fcitx5-table"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "fcitx5-table-quick-classic-5.1.7-1-1-aarch64.mind",
+   "sha256": "6394b1446217b5001f9ccc76deb6a0176e855e196ca7d1e41f4327b8289f301b",
+   "size": 345989,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/fcitx5-table-quick-classic-5.1.7-1-1-aarch64.mind"
   },
   {
    "name": "fcitx5-table-quick3",
@@ -97390,6 +98117,27 @@
    "size": 365442,
    "chunk_tag": "v1.0-chunk-07",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-07/featherpad-l10n-1.6.1-1-1-aarch64.mind"
+  },
+  {
+   "name": "feed2imap",
+   "version": "1.3.4-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "feed aggregator (RSS/Atom) which puts items on a IMAP mail server",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "ruby",
+    "ruby-rubymail (>= 1.1.4)",
+    "ruby-feedparser (>= 0.9)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "feed2imap-1.3.4-1-1-aarch64.mind",
+   "sha256": "8b07abc0669bd72cf8aa2fc398b2bd34c6eb9c3d10e0f542308405341f3e58d8",
+   "size": 28764,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/feed2imap-1.3.4-1-1-aarch64.mind"
   },
   {
    "name": "feedbackd",
@@ -118725,6 +119473,39 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-13/freeciv-data-3.1.4+ds-2+deb13u1-1-aarch64.mind"
   },
   {
+   "name": "freeciv-ruleset-tools",
+   "version": "3.1.4+ds-2+deb13u1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Civilization turn based strategy game (ruleset tools)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libbz2-1.0",
+    "libc6 (>= 2.38)",
+    "libcurl3t64-gnutls (>= 7.56.1)",
+    "libgcc-s1 (>= 3.0)",
+    "libicu76 (>= 76.1-1~)",
+    "liblua5.4-0 (>= 5.4.6)",
+    "liblzma5 (>= 5.1.1alpha+20120614)",
+    "libqt6core6t64 (>= 6.8.2)",
+    "libqt6gui6 (>= 6.1.2)",
+    "libqt6widgets6 (>= 6.3.0)",
+    "libreadline8t64 (>= 6.0)",
+    "libsqlite3-0 (>= 3.5.9)",
+    "libstdc++6 (>= 5)",
+    "libzstd1 (>= 1.5.5)",
+    "zlib1g (>= 1:1.1.4)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "freeciv-ruleset-tools-3.1.4+ds-2+deb13u1-1-aarch64.mind",
+   "sha256": "228183039f7f8c8117577c3147905799e167c5be931b6a430ac23b53165a6055",
+   "size": 3313679,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/freeciv-ruleset-tools-3.1.4+ds-2+deb13u1-1-aarch64.mind"
+  },
+  {
    "name": "freeciv-server",
    "version": "3.1.4+ds-2+deb13u1",
    "release": "1",
@@ -119964,6 +120745,28 @@
    "size": 245691,
    "chunk_tag": "v1.0-chunk-24",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-24/freerdp3-dev-3.15.0+dfsg-2.1+deb13u3-1-aarch64.mind"
+  },
+  {
+   "name": "freerdp3-proxy",
+   "version": "3.15.0+dfsg-2.1+deb13u3",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "FreeRDP proxy server",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libfreerdp-server-proxy3-3 (= 3.15.0+dfsg-2.1+deb13u3)",
+    "libfreerdp3-3 (= 3.15.0+dfsg-2.1+deb13u3)",
+    "libwinpr3-3 (= 3.15.0+dfsg-2.1+deb13u3)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "freerdp3-proxy-3.15.0+dfsg-2.1+deb13u3-1-aarch64.mind",
+   "sha256": "f325abf780c1663d3093816bd65512a0816fd6cadf10adb959a2634052b6a557",
+   "size": 58070,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/freerdp3-proxy-3.15.0+dfsg-2.1+deb13u3-1-aarch64.mind"
   },
   {
    "name": "freerdp3-sdl",
@@ -129441,6 +130244,28 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-28/games-finest-5-1-aarch64.mind"
   },
   {
+   "name": "games-fps",
+   "version": "5",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Debian's first-person shooter games",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "games-tasks (= 5)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "games-fps-5-1-aarch64.mind",
+   "sha256": "a5ac36b03cad660f61866e88a7520374f4cd029438be20ce5e3df2159ec3e263",
+   "size": 6979,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/games-fps-5-1-aarch64.mind"
+  },
+  {
    "name": "games-minesweeper",
    "version": "5",
    "release": "1",
@@ -129483,6 +130308,28 @@
    "size": 6983,
    "chunk_tag": "v1.0-chunk-39",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-39/games-puzzle-5-1-aarch64.mind"
+  },
+  {
+   "name": "games-racing",
+   "version": "5",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Debian's racing games",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "games-tasks (= 5)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "games-racing-5-1-aarch64.mind",
+   "sha256": "e8878184c2df3e34c346ece4f73cdf30f97e11c1e1e593dd512ef8c06f82a458",
+   "size": 6992,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/games-racing-5-1-aarch64.mind"
   },
   {
    "name": "games-rogue",
@@ -129766,6 +130613,25 @@
    "size": 336563,
    "chunk_tag": "v1.0-chunk-19",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-19/gammu-1.42.0-10-1-aarch64.mind"
+  },
+  {
+   "name": "gammu-doc",
+   "version": "1.42.0-10",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Gammu Manual",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libjs-sphinxdoc (>= 7.4)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "gammu-doc-1.42.0-10-1-aarch64.mind",
+   "sha256": "8da9e78f8a92ddc8bf874ddda03a12dc84eb0a26fec882c37668d1ff1c70752e",
+   "size": 804968,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/gammu-doc-1.42.0-10-1-aarch64.mind"
   },
   {
    "name": "gammu-smsd",
@@ -131597,6 +132463,29 @@
    "size": 777,
    "chunk_tag": "v1.0-chunk-35",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-35/gcc-12-multilib-x86-64-linux-gnux32-12.4.0-5cross1-1-aarch64.mind"
+  },
+  {
+   "name": "gcc-12-plugin-dev",
+   "version": "12.4.0-5",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Files for GNU GCC plugin development.",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-12-base (= 12.4.0-5)",
+    "gcc-12 (= 12.4.0-5)",
+    "libgmp-dev (>= 2:5.0.1~)",
+    "libmpc-dev (>= 1.0)",
+    "libc6 (>= 2.38)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "gcc-12-plugin-dev-12.4.0-5-1-aarch64.mind",
+   "sha256": "3e8cd26a49ea5d9de1f2c4cf175c00d196489449767afa0a3cb613f330ff25c3",
+   "size": 2013197,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/gcc-12-plugin-dev-12.4.0-5-1-aarch64.mind"
   },
   {
    "name": "gcc-12-powerpc64le-linux-gnu",
@@ -140072,6 +140961,33 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/gcin-data-2.9.4+dfsg1-3-1-aarch64.mind"
   },
   {
+   "name": "gcin-gtk3-immodule",
+   "version": "2.9.4+dfsg1-3",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "GTK3 input method module with gcin as backend",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.17)",
+    "libgcin (>= 2.9.4+dfsg1)",
+    "libglib2.0-0t64 (>= 2.12.0)",
+    "libgtk-3-0t64 (>= 3.0.0)",
+    "libpango-1.0-0 (>= 1.14.0)",
+    "gcin (>= 2.9.4+dfsg1-3)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "postrm"
+   ],
+   "filename": "gcin-gtk3-immodule-2.9.4+dfsg1-3-1-aarch64.mind",
+   "sha256": "591779c0958d4e9717d807182b76de3723002d2e3b82ebb6cb406d19d4cd9e13",
+   "size": 76406,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/gcin-gtk3-immodule-2.9.4+dfsg1-3-1-aarch64.mind"
+  },
+  {
    "name": "gcin-tables",
    "version": "2.9.4+dfsg1-3",
    "release": "1",
@@ -141167,6 +142083,27 @@
    "size": 365995,
    "chunk_tag": "v1.0-chunk-02",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-02/gdisk-1.0.10-2+b1-1-aarch64.mind"
+  },
+  {
+   "name": "gdk-pixbuf-tests",
+   "version": "2.42.12+dfsg-4+deb13u1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "installed tests for the GDK Pixbuf library",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libgdk-pixbuf-2.0-0 (= 2.42.12+dfsg-4+deb13u1)",
+    "libc6 (>= 2.34)",
+    "libglib2.0-0t64 (>= 2.78.0)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "gdk-pixbuf-tests-2.42.12+dfsg-4+deb13u1-1-aarch64.mind",
+   "sha256": "9c7cebb19e41e17868486292fc475153e84ea80cf1c95f90607f91df491a9c5b",
+   "size": 6006775,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/gdk-pixbuf-tests-2.42.12+dfsg-4+deb13u1-1-aarch64.mind"
   },
   {
    "name": "gdl-astrolib",
@@ -145364,6 +146301,68 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-37/gfortran-mingw-w64-i686-14.2.0-17+27-1-aarch64.mind"
   },
   {
+   "name": "gfortran-mingw-w64-i686-posix",
+   "version": "14.2.0-19+27+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "GNU Fortran compiler for MinGW-w64, Win32/POSIX",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-mingw-w64-i686-posix (= 14.2.0-19+27+b1)",
+    "gcc-mingw-w64-i686-posix-runtime (= 14.2.0-19+27+b1)",
+    "gcc-mingw-w64-base (= 14.2.0-19+27+b1)",
+    "libc6 (>= 2.38)",
+    "libgmp10 (>= 2:6.3.0+dfsg)",
+    "libisl23 (>= 0.15)",
+    "libmpc3 (>= 1.1.0)",
+    "libmpfr6 (>= 3.1.3)",
+    "libzstd1 (>= 1.5.5)",
+    "zlib1g (>= 1:1.1.4)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "gfortran-mingw-w64-i686-posix-14.2.0-19+27+b1-1-aarch64.mind",
+   "sha256": "d2613b298a590eb07d80789f38e6b22269b4bfa08de5a2b346634a87190dfc55",
+   "size": 18122710,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/gfortran-mingw-w64-i686-posix-14.2.0-19+27+b1-1-aarch64.mind"
+  },
+  {
+   "name": "gfortran-mingw-w64-i686-win32",
+   "version": "14.2.0-19+27+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "GNU Fortran compiler for MinGW-w64, Win32/Win32",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-mingw-w64-i686-win32 (= 14.2.0-19+27+b1)",
+    "gcc-mingw-w64-i686-win32-runtime (= 14.2.0-19+27+b1)",
+    "gcc-mingw-w64-base (= 14.2.0-19+27+b1)",
+    "libc6 (>= 2.38)",
+    "libgmp10 (>= 2:6.3.0+dfsg)",
+    "libisl23 (>= 0.15)",
+    "libmpc3 (>= 1.1.0)",
+    "libmpfr6 (>= 3.1.3)",
+    "libzstd1 (>= 1.5.5)",
+    "zlib1g (>= 1:1.1.4)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "gfortran-mingw-w64-i686-win32-14.2.0-19+27+b1-1-aarch64.mind",
+   "sha256": "76149c95cb11645e9a91941c7e2971a780d06b68316e3a905447bc4a7d7abbfd",
+   "size": 18126943,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/gfortran-mingw-w64-i686-win32-14.2.0-19+27+b1-1-aarch64.mind"
+  },
+  {
    "name": "gfortran-mingw-w64-x86-64",
    "version": "14.2.0-17+27",
    "release": "1",
@@ -147072,6 +148071,25 @@
    "size": 53650336,
    "chunk_tag": "v1.0-chunk-33",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-33/gimp-help-uk-3.0.0-4-1-aarch64.mind"
+  },
+  {
+   "name": "gimp-help-zh-cn",
+   "version": "3.0.0-4",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Documentation for the GIMP (Simplified Chinese)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gimp-help-common (= 3.0.0-4)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "gimp-help-zh-cn-3.0.0-4-1-aarch64.mind",
+   "sha256": "7c25e68cc139c922c1512ac0c05762bfabbb92b16b0f1c23c5665c57c87c39b5",
+   "size": 53632346,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/gimp-help-zh-cn-3.0.0-4-1-aarch64.mind"
   },
   {
    "name": "gimp-texturize",
@@ -204002,6 +205020,29 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-32/junior-games-adventure-1.32-1-aarch64.mind"
   },
   {
+   "name": "junior-games-arcade",
+   "version": "1.32",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Debian Jr. arcade games",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "junior-config (= 1.32)",
+    "junior-tasks (= 1.32)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "junior-games-arcade-1.32-1-aarch64.mind",
+   "sha256": "e07e2b45efd9d8e158a8d74360180fc5fd76bd20062c202f49cd42020c2008ea",
+   "size": 7016,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/junior-games-arcade-1.32-1-aarch64.mind"
+  },
+  {
    "name": "junior-games-card",
    "version": "1.32",
    "release": "1",
@@ -227015,6 +228056,26 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-15/libadmesh1-0.98.5-1+b2-1-aarch64.mind"
   },
   {
+   "name": "libadns1-dev",
+   "version": "1.6.1-1+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Asynchronous-capable DNS client library (development)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libadns1t64 (= 1.6.1-1+b1)",
+    "libc6-dev"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libadns1-dev-1.6.1-1+b1-1-aarch64.mind",
+   "sha256": "e918894eda1777b8958ac27ce3027d33e1b7bf561374d93b0fff4e899d5e7561",
+   "size": 115010,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libadns1-dev-1.6.1-1+b1-1-aarch64.mind"
+  },
+  {
    "name": "libadns1t64",
    "version": "1.6.1-1+b1",
    "release": "1",
@@ -235707,6 +236768,26 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-19/libatomic1-i386-cross-14.2.0-19cross1-1-aarch64.mind"
   },
   {
+   "name": "libatomic1-loong64-cross",
+   "version": "14.2.0-19cross1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "support library providing __atomic built-in functions",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-14-cross-base-ports (= 14.2.0-19cross1)",
+    "libc6-loong64-cross (>= 2.41)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libatomic1-loong64-cross-14.2.0-19cross1-1-aarch64.mind",
+   "sha256": "62638b20dcb3437be784b3becbc680ef2ad796dcd57cd07b72a03636047d4fa2",
+   "size": 10377,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libatomic1-loong64-cross-14.2.0-19cross1-1-aarch64.mind"
+  },
+  {
    "name": "libatomic1-m68k-cross",
    "version": "14.2.0-19cross1",
    "release": "1",
@@ -235905,6 +236986,26 @@
    "size": 10600,
    "chunk_tag": "v1.0-chunk-28",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-28/libatomic1-s390x-cross-14.2.0-19cross1-1-aarch64.mind"
+  },
+  {
+   "name": "libatomic1-sh4-cross",
+   "version": "14.2.0-19cross1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "support library providing __atomic built-in functions",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-14-cross-base-ports (= 14.2.0-19cross1)",
+    "libc6-sh4-cross (>= 2.41)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libatomic1-sh4-cross-14.2.0-19cross1-1-aarch64.mind",
+   "sha256": "b1f2c8f52cf674dd5648940ac75f4bfaaa0aa25114543250388290318771d13b",
+   "size": 6673,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libatomic1-sh4-cross-14.2.0-19cross1-1-aarch64.mind"
   },
   {
    "name": "libatomic1-sparc64-cross",
@@ -243105,6 +244206,26 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-08/libboost-atomic1.83.0-1.83.0-4.2-1-aarch64.mind"
   },
   {
+   "name": "libboost-atomic1.88-dev",
+   "version": "1.88.0-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "atomic data types, operations, and memory ordering constraints",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libboost1.88-dev (= 1.88.0-1)",
+    "libboost-atomic1.88.0 (= 1.88.0-1)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libboost-atomic1.88-dev-1.88.0-1-1-aarch64.mind",
+   "sha256": "4558fc91291cb2b63bbe90de0b020cbd04e0ef904cc375efe0715d6b9c45adda",
+   "size": 333845,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libboost-atomic1.88-dev-1.88.0-1-1-aarch64.mind"
+  },
+  {
    "name": "libboost-atomic1.88.0",
    "version": "1.88.0-1",
    "release": "1",
@@ -243421,6 +244542,23 @@
    "size": 327935,
    "chunk_tag": "v1.0-chunk-07",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-07/libboost-date-time1.83.0-1.83.0-4.2-1-aarch64.mind"
+  },
+  {
+   "name": "libboost-date-time1.88.0",
+   "version": "1.88.0-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "set of date-time libraries based on generic programming concepts",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libboost-date-time1.88.0-1.88.0-1-1-aarch64.mind",
+   "sha256": "345e10e466ebaac94e585817c5b6da1e69704801596a75f73b924157ee50bad6",
+   "size": 328592,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libboost-date-time1.88.0-1.88.0-1-1-aarch64.mind"
   },
   {
    "name": "libboost-dev",
@@ -244739,6 +245877,26 @@
    "size": 476440,
    "chunk_tag": "v1.0-chunk-07",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-07/libboost-serialization1.83.0-1.83.0-4.2-1-aarch64.mind"
+  },
+  {
+   "name": "libboost-serialization1.88-dev",
+   "version": "1.88.0-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "serialization library for C++",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libboost1.88-dev (= 1.88.0-1)",
+    "libboost-serialization1.88.0 (= 1.88.0-1)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libboost-serialization1.88-dev-1.88.0-1-1-aarch64.mind",
+   "sha256": "710f131aeda6bd1d5dc6384f02c02471c6771f3c159f48479f211eb9fb320597",
+   "size": 593211,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libboost-serialization1.88-dev-1.88.0-1-1-aarch64.mind"
   },
   {
    "name": "libboost-serialization1.88.0",
@@ -249085,6 +250243,30 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-01/libcairo-gobject2-1.18.4-1+b1-1-aarch64.mind"
   },
   {
+   "name": "libcairo-ocaml",
+   "version": "1:1.2.0-10+b3",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "OCaml bindings for Cairo (runtime)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libstdlib-ocaml-m4xw9",
+    "ocaml-base-5.3.0",
+    "libc6 (>= 2.17)",
+    "libcairo2 (>= 1.2.4)",
+    "libfontconfig1 (>= 2.12.6)",
+    "libfreetype6 (>= 2.2.1)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libcairo-ocaml-1.1.2.0-10+b3-1-aarch64.mind",
+   "sha256": "cda224faac7b0cdff8a613eb25a5e44e47638e6365aeb646fd1cd4cb49347db5",
+   "size": 25692,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libcairo-ocaml-1.1.2.0-10+b3-1-aarch64.mind"
+  },
+  {
    "name": "libcairo-perl",
    "version": "1.109-5+b1",
    "release": "1",
@@ -249346,6 +250528,27 @@
    "size": 80246,
    "chunk_tag": "v1.0-chunk-20",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-20/libcairomm-1.16-dev-1.18.0-2-1-aarch64.mind"
+  },
+  {
+   "name": "libcaja-extension-dev",
+   "version": "1.26.4-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "libraries for Caja components (development files)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gir1.2-caja-2.0 (= 1.26.4-1)",
+    "libcaja-extension1 (= 1.26.4-1)",
+    "libgtk-3-dev"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libcaja-extension-dev-1.26.4-1-1-aarch64.mind",
+   "sha256": "f2ebf0a209a2b8e53362b75aadb7ab4aeafa7910d3ccf7c5606424af9ed8eeac",
+   "size": 41289,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libcaja-extension-dev-1.26.4-1-1-aarch64.mind"
   },
   {
    "name": "libcaja-extension1",
@@ -255686,6 +256889,27 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-27/libcib54-3.0.0-2-1-aarch64.mind"
   },
   {
+   "name": "libcif1",
+   "version": "0.4.2-6+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "CIF API CIF-parsing and manipulation library - shared library",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.17)",
+    "libicu76 (>= 76.1-1~)",
+    "libsqlite3-0 (>= 3.6.0)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libcif1-0.4.2-6+b1-1-aarch64.mind",
+   "sha256": "f6e002a38a527618131e454761efeb8adc86fba57b7cbd810ae37159d8ec58f5",
+   "size": 78747,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libcif1-0.4.2-6+b1-1-aarch64.mind"
+  },
+  {
    "name": "libcifpp-data",
    "version": "7.0.9-1",
    "release": "1",
@@ -259933,6 +261157,25 @@
    "size": 48582,
    "chunk_tag": "v1.0-chunk-02",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-02/libcolamd3-1.7.10.1+dfsg-1-1-aarch64.mind"
+  },
+  {
+   "name": "libcollada-dom-dev",
+   "version": "2.5.0+ds1-3+b4",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "collada-dom 2.5.0 C++ headers and build tools",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libcollada-dom2.5-dp0 (= 2.5.0+ds1-3+b4)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libcollada-dom-dev-2.5.0+ds1-3+b4-1-aarch64.mind",
+   "sha256": "aff03a8eb51ce272774ae87b01a9cf7bc41bbff7999f8371af4905b0ae3ad367",
+   "size": 425187,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libcollada-dom-dev-2.5.0+ds1-3+b4-1-aarch64.mind"
   },
   {
    "name": "libcollada-dom2.5-dp0",
@@ -266108,6 +267351,27 @@
    "size": 64884,
    "chunk_tag": "v1.0-chunk-13",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-13/libcsironn0-5.15.0+dfsg2-15+b1-1-aarch64.mind"
+  },
+  {
+   "name": "libcsnd-dev",
+   "version": "1:6.18.1+dfsg-4",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "development files for Csound -- C++ API",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libcsnd6-6.0v5 (<< 1:6.18.1+dfsg-4.1~)",
+    "libcsnd6-6.0v5 (>= 1:6.18.1+dfsg-4)",
+    "libcsound64-dev"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libcsnd-dev-1.6.18.1+dfsg-4-1-aarch64.mind",
+   "sha256": "7f44bea7653d6092434d4be0dca7ca612beeb725fc234db114c4edd3cff62651",
+   "size": 29948,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libcsnd-dev-1.6.18.1+dfsg-4-1-aarch64.mind"
   },
   {
    "name": "libcsnd6-6.0v5",
@@ -277646,6 +278910,26 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-16/libdune-uggrid-dev-2.10.0-1+b1-1-aarch64.mind"
   },
   {
+   "name": "libduo3t64",
+   "version": "1.11.3-1.2+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Duo Security library",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.38)",
+    "libssl3t64 (>= 3.0.0)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libduo3t64-1.11.3-1.2+b1-1-aarch64.mind",
+   "sha256": "b72c4c132e4b2623264b0f77524c2756b59e7f5c7cb149fb59159abdf4c2df0e",
+   "size": 50517,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libduo3t64-1.11.3-1.2+b1-1-aarch64.mind"
+  },
+  {
    "name": "libduration-ocaml",
    "version": "0.2.1-4+b4",
    "release": "1",
@@ -282353,6 +283637,25 @@
    "size": 306929,
    "chunk_tag": "v1.0-chunk-11",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-11/libell0-0.77-1-1-aarch64.mind"
+  },
+  {
+   "name": "libelpa-dev",
+   "version": "2022.11.001-4",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Eigenvalue SoLvers for Petaflop-Applications (Development version)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libelpa19 (= 2022.11.001-4)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libelpa-dev-2022.11.001-4-1-aarch64.mind",
+   "sha256": "32122ab9f35d154902a0afed9b9d1a24e304fa27038d94fb7c1685251c28167c",
+   "size": 709980,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libelpa-dev-2022.11.001-4-1-aarch64.mind"
   },
   {
    "name": "libelpa19",
@@ -296471,6 +297774,26 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-19/libgaviotatb1-0.4-2.2-1-aarch64.mind"
   },
   {
+   "name": "libgavl-dev",
+   "version": "2.0.0~svn6298-1+b3",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "low level audio and video library - development files",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libgavl2 (= 2.0.0~svn6298-1+b3)",
+    "pkg-config"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libgavl-dev-2.0.0.svn6298-1+b3-1-aarch64.mind",
+   "sha256": "eaae7c36dfbd74c52785138f622ee22e7512feaf0e582c9e2768af7e8f4f2e9b",
+   "size": 83684,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libgavl-dev-2.0.0.svn6298-1+b3-1-aarch64.mind"
+  },
+  {
    "name": "libgavl2",
    "version": "2.0.0~svn6298-1+b3",
    "release": "1",
@@ -296831,6 +298154,29 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-02/libgcc-14-dev-14.2.0-19-1-aarch64.mind"
   },
   {
+   "name": "libgcc-14-dev-alpha-cross",
+   "version": "14.2.0-19cross1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "GCC support library (development files)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-14-cross-base-ports (= 14.2.0-19cross1)",
+    "libgcc-s1-alpha-cross (>= 14.2.0-19cross1)",
+    "libgomp1-alpha-cross (>= 14.2.0-19cross1)",
+    "libitm1-alpha-cross (>= 14.2.0-19cross1)",
+    "libatomic1-alpha-cross (>= 14.2.0-19cross1)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libgcc-14-dev-alpha-cross-14.2.0-19cross1-1-aarch64.mind",
+   "sha256": "c6b800c5e73cc1822bb827f9b1f75dc62a9035ec803544ec99c1388ec396db2b",
+   "size": 470025,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libgcc-14-dev-alpha-cross-14.2.0-19cross1-1-aarch64.mind"
+  },
+  {
    "name": "libgcc-14-dev-amd64-cross",
    "version": "14.2.0-19cross1",
    "release": "1",
@@ -297006,6 +298352,30 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-30/libgcc-14-dev-mipsel-cross-14.2.0-13cross1-1-aarch64.mind"
   },
   {
+   "name": "libgcc-14-dev-powerpc-cross",
+   "version": "14.2.0-19cross1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "GCC support library (development files)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-14-cross-base-ports (= 14.2.0-19cross1)",
+    "libgcc-s1-powerpc-cross (>= 14.2.0-19cross1)",
+    "libgomp1-powerpc-cross (>= 14.2.0-19cross1)",
+    "libatomic1-powerpc-cross (>= 14.2.0-19cross1)",
+    "libasan8-powerpc-cross (>= 14.2.0-19cross1)",
+    "libubsan1-powerpc-cross (>= 14.2.0-19cross1)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libgcc-14-dev-powerpc-cross-14.2.0-19cross1-1-aarch64.mind",
+   "sha256": "63f0de8c286fcf1bdf6f766d923e787c31045b07f1049687ffdaca4d85f23ce1",
+   "size": 1765229,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libgcc-14-dev-powerpc-cross-14.2.0-19cross1-1-aarch64.mind"
+  },
+  {
    "name": "libgcc-14-dev-riscv64-cross",
    "version": "14.2.0-19cross1",
    "release": "1",
@@ -297031,6 +298401,31 @@
    "size": 9006993,
    "chunk_tag": "v1.0-chunk-22",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-22/libgcc-14-dev-riscv64-cross-14.2.0-19cross1-1-aarch64.mind"
+  },
+  {
+   "name": "libgcc-14-dev-s390x-cross",
+   "version": "14.2.0-19cross1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "GCC support library (development files)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-14-cross-base (>= 14.2.0-19)",
+    "libgcc-s1-s390x-cross (>= 14.2.0-19cross1)",
+    "libgomp1-s390x-cross (>= 14.2.0-19cross1)",
+    "libitm1-s390x-cross (>= 14.2.0-19cross1)",
+    "libatomic1-s390x-cross (>= 14.2.0-19cross1)",
+    "libasan8-s390x-cross (>= 14.2.0-19cross1)",
+    "libubsan1-s390x-cross (>= 14.2.0-19cross1)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libgcc-14-dev-s390x-cross-14.2.0-19cross1-1-aarch64.mind",
+   "sha256": "d05241269adf3e6a7641d71119b7d3c6d4b9942f9a9532276cc4d8fdb15e15f1",
+   "size": 1712254,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libgcc-14-dev-s390x-cross-14.2.0-19cross1-1-aarch64.mind"
   },
   {
    "name": "libgcc-s1",
@@ -319229,6 +320624,28 @@
    "size": 48969,
    "chunk_tag": "v1.0-chunk-02",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-02/libgif7-5.2.2-1+deb13u1-1-aarch64.mind"
+  },
+  {
+   "name": "libgiftiio0",
+   "version": "1.0.9-6+b2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "IO library for the GIFTI cortical surface data format",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.17)",
+    "libexpat1 (>= 2.0.1)",
+    "libniftiio2t64 (>= 3.0.1)",
+    "zlib1g (>= 1:1.1.4)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libgiftiio0-1.0.9-6+b2-1-aarch64.mind",
+   "sha256": "4aedd3f1e03cef83896c130062637be9f8025e78789d6eed574f8df54971ba5e",
+   "size": 73980,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libgiftiio0-1.0.9-6+b2-1-aarch64.mind"
   },
   {
    "name": "libgig-dev",
@@ -344485,6 +345902,26 @@
    "size": 32518,
    "chunk_tag": "v1.0-chunk-28",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-28/libitm1-sparc64-cross-14.2.0-19cross1-1-aarch64.mind"
+  },
+  {
+   "name": "libitm1-x32-cross",
+   "version": "14.2.0-19cross1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "GNU Transactional Memory Library",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-14-cross-base-ports (= 14.2.0-19cross1)",
+    "libc6-x32-cross (>= 2.41)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libitm1-x32-cross-14.2.0-19cross1-1-aarch64.mind",
+   "sha256": "e9492dd3172f1ec208c4a468e45d4828d5710b1ef0cd74a8f759eec30d7a7c59",
+   "size": 35423,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libitm1-x32-cross-14.2.0-19cross1-1-aarch64.mind"
   },
   {
    "name": "libitpp-dev",
@@ -440389,6 +441826,26 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-32/libquadmath0-ppc64el-cross-14.2.0-19cross1-1-aarch64.mind"
   },
   {
+   "name": "libquadmath0-x32-cross",
+   "version": "14.2.0-19cross1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "GCC Quad-Precision Math Library",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-14-cross-base-ports (= 14.2.0-19cross1)",
+    "libc6-x32-cross (>= 2.41)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libquadmath0-x32-cross-14.2.0-19cross1-1-aarch64.mind",
+   "sha256": "0737d8737a5e72ee14f111a541d43aee76d83d257695ab11b6c530011cfdf5ef",
+   "size": 179545,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libquadmath0-x32-cross-14.2.0-19cross1-1-aarch64.mind"
+  },
+  {
    "name": "libquadrule-dev",
    "version": "0~20121001-3",
    "release": "1",
@@ -454536,6 +455993,23 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-31/librust-array-init-dev-2.0.1-1+b2-1-aarch64.mind"
   },
   {
+   "name": "librust-arraydeque-dev",
+   "version": "0.5.1-1+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Fixed-capacity ring buffer which can be stored on the stack - Rust source code",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "librust-arraydeque-dev-0.5.1-1+b1-1-aarch64.mind",
+   "sha256": "9779fea0c5aa6745a4bb84a13a31a1b7835d18bba6c998a737b8ea93361b5555",
+   "size": 22989,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/librust-arraydeque-dev-0.5.1-1+b1-1-aarch64.mind"
+  },
+  {
    "name": "librust-arrayvec-dev",
    "version": "0.7.6-1",
    "release": "1",
@@ -456387,6 +457861,37 @@
    "size": 23379,
    "chunk_tag": "v1.0-chunk-38",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-38/librust-convert-case-dev-0.6.0-2+b2-1-aarch64.mind"
+  },
+  {
+   "name": "librust-cookie-dev",
+   "version": "0.18.1-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "HTTP cookie parsing and cookie jar management - Rust source code",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "librust-aes-gcm-0.10+default-dev",
+    "librust-base64-0+default-dev (>= 0.21.7-~~)",
+    "librust-hkdf-0.12+default-dev",
+    "librust-hmac-0.12+default-dev",
+    "librust-percent-encoding-2+default-dev",
+    "librust-rand-0.8+default-dev",
+    "librust-sha2-0.10+default-dev",
+    "librust-subtle-2+default-dev (>= 2.3-~~)",
+    "librust-time-0.3+formatting-dev",
+    "librust-time-0.3+macros-dev",
+    "librust-time-0.3+parsing-dev",
+    "librust-time-0.3+std-dev",
+    "librust-version-check-0.9+default-dev (>= 0.9.4-~~)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "librust-cookie-dev-0.18.1-2-1-aarch64.mind",
+   "sha256": "d827e91503796ef6ba8727588f2733ecffb604a63ccb9e09316947db5e9c51e9",
+   "size": 56092,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/librust-cookie-dev-0.18.1-2-1-aarch64.mind"
   },
   {
    "name": "librust-core-maths-dev",
@@ -458932,6 +460437,40 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-38/librust-gtk4-sys-dev-0.9.6-2-1-aarch64.mind"
   },
   {
+   "name": "librust-h2-dev",
+   "version": "0.4.7-3",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "HTTP/2 client and server - Rust source code",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "librust-atomic-waker-1+default-dev",
+    "librust-bytes-1+default-dev",
+    "librust-fnv-1+default-dev (>= 1.0.5-~~)",
+    "librust-futures-core-0.3-dev",
+    "librust-futures-sink-0.3-dev",
+    "librust-http-0.2+default-dev",
+    "librust-http-1+default-dev",
+    "librust-indexmap-2+default-dev",
+    "librust-indexmap-2+std-dev",
+    "librust-slab-0.4+default-dev (>= 0.4.2-~~)",
+    "librust-tokio-1+default-dev",
+    "librust-tokio-1+io-util-dev",
+    "librust-tokio-util-0.7+codec-dev (>= 0.7.1-~~)",
+    "librust-tokio-util-0.7+default-dev (>= 0.7.1-~~)",
+    "librust-tokio-util-0.7+io-dev (>= 0.7.1-~~)",
+    "librust-tracing-0.1+std-dev (>= 0.1.35-~~)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "librust-h2-dev-0.4.7-3-1-aarch64.mind",
+   "sha256": "6492ce0d9ad9f65aff38499caa6094780bca748bcabdccd12e26bfebb2b8c461",
+   "size": 356346,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/librust-h2-dev-0.4.7-3-1-aarch64.mind"
+  },
+  {
    "name": "librust-half-dev",
    "version": "2.4.1-2",
    "release": "1",
@@ -459206,6 +460745,23 @@
    "size": 37288,
    "chunk_tag": "v1.0-chunk-40",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-40/librust-httparse-dev-1.8.0-1+b2-1-aarch64.mind"
+  },
+  {
+   "name": "librust-httpdate-dev",
+   "version": "1.0.2-1+b2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "HTTP date parsing and formatting - Rust source code",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "librust-httpdate-dev-1.0.2-1+b2-1-aarch64.mind",
+   "sha256": "dcc0fe8137acdccfe162432cbd564f9d8380f98c3db4eb058cf75f4fb8f92709",
+   "size": 14031,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/librust-httpdate-dev-1.0.2-1+b2-1-aarch64.mind"
   },
   {
    "name": "librust-humantime-dev",
@@ -466043,6 +467599,27 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-30/librust-xml-rs-dev-0.8.19-1+b7-1-aarch64.mind"
   },
   {
+   "name": "librust-yaml-rust2-dev",
+   "version": "0.10.1-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Fully YAML 1.2 compliant YAML parser - Rust source code",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "librust-arraydeque-0.5+default-dev (>= 0.5.1-~~)",
+    "librust-encoding-rs-0.8+default-dev (>= 0.8.33-~~)",
+    "librust-hashlink-0.8+default-dev"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "librust-yaml-rust2-dev-0.10.1-1-1-aarch64.mind",
+   "sha256": "65417f1570fa98cb1028463acded84c8d71db9a710a55c032cb7d261c42ca2a2",
+   "size": 90878,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/librust-yaml-rust2-dev-0.10.1-1-1-aarch64.mind"
+  },
+  {
    "name": "librust-yeslogic-fontconfig-sys-dev",
    "version": "5.0.0-1",
    "release": "1",
@@ -468668,6 +470245,25 @@
    "size": 177277,
    "chunk_tag": "v1.0-chunk-38",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-38/libsdl2-compat-2.32.54+ds-1-1-aarch64.mind"
+  },
+  {
+   "name": "libsdl2-compat-shim",
+   "version": "2.32.54+ds-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "libsdl2-2.0-0 replacement using SDL 3",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libsdl2-compat (= 2.32.54+ds-1)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libsdl2-compat-shim-2.32.54+ds-1-1-aarch64.mind",
+   "sha256": "fadd3a94e7a0b1a4d9b6b15f62a30d934dceaed24a7612dbdf09b0d1acd2a3dd",
+   "size": 8843,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libsdl2-compat-shim-2.32.54+ds-1-1-aarch64.mind"
   },
   {
    "name": "libsdl2-dev",
@@ -498796,6 +500392,28 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-31/libubsan1-sparc64-cross-14.2.0-19cross1-1-aarch64.mind"
   },
   {
+   "name": "libubsan1-x32-cross",
+   "version": "14.2.0-19cross1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "UBSan -- undefined behaviour sanitizer (runtime)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "gcc-14-cross-base-ports (= 14.2.0-19cross1)",
+    "libc6-x32-cross (>= 2.41)",
+    "libgcc-s1-x32-cross (>= 3.3)",
+    "libstdc++6-x32-cross"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libubsan1-x32-cross-14.2.0-19cross1-1-aarch64.mind",
+   "sha256": "667a8f4b538309f729f1af117f452f456553a92d0f0c8ecc421dbcc7fcec128b",
+   "size": 1476323,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libubsan1-x32-cross-14.2.0-19cross1-1-aarch64.mind"
+  },
+  {
    "name": "libuchardet-dev",
    "version": "0.0.8-1+b2",
    "release": "1",
@@ -502804,6 +504422,31 @@
    "size": 839904,
    "chunk_tag": "v1.0-chunk-13",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-13/libvalacodegen-0.56-0-0.56.18-2-1-aarch64.mind"
+  },
+  {
+   "name": "libvaladoc-0.56-0",
+   "version": "0.56.18-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "API documentation generator for vala (library)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.17)",
+    "libcgraph6 (>= 2.42.4)",
+    "libglib2.0-0t64 (>= 2.50.0)",
+    "libgvc6 (>= 2.42.4)",
+    "libvala-0.56-0 (= 0.56.18-2)",
+    "libvalacodegen-0.56-0 (= 0.56.18-2)",
+    "libvaladoc-0.56-data"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libvaladoc-0.56-0-0.56.18-2-1-aarch64.mind",
+   "sha256": "107318b5543ee66964f3a1f5e43145cb430dcbbcda7fe493e58056225695d6fb",
+   "size": 693166,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libvaladoc-0.56-0-0.56.18-2-1-aarch64.mind"
   },
   {
    "name": "libvaladoc-0.56-data",
@@ -510208,6 +511851,26 @@
    "size": 44224,
    "chunk_tag": "v1.0-chunk-06",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-06/libwpebackend-fdo-1.0-1-1.16.0-1-1-aarch64.mind"
+  },
+  {
+   "name": "libwpebackend-fdo-1.0-dev",
+   "version": "1.16.0-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "WPE backend for FreeDesktop.org - Development files",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libwpebackend-fdo-1.0-1 (= 1.16.0-1)",
+    "libwpe-1.0-dev"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "libwpebackend-fdo-1.0-dev-1.16.0-1-1-aarch64.mind",
+   "sha256": "d707dd3ddde8ce16f688fcb7b35ca182d0a8bd90980c62a1835fa99751e4dee7",
+   "size": 9560,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/libwpebackend-fdo-1.0-dev-1.16.0-1-1-aarch64.mind"
   },
   {
    "name": "libwpewebkit-2.0-1",
@@ -636082,6 +637745,27 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/postgresql-17-powa-5.0.2-1-1-aarch64.mind"
   },
   {
+   "name": "postgresql-17-prefix",
+   "version": "1.2.10-3",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Prefix Range module for PostgreSQL",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "postgresql-17",
+    "postgresql-17-jit-llvm (>= 16)",
+    "libc6 (>= 2.17)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "postgresql-17-prefix-1.2.10-3-1-aarch64.mind",
+   "sha256": "090b31bc1511a6f87f71134c040efba205214fba4b03c2515202d02cb9aaaec5",
+   "size": 51700,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/postgresql-17-prefix-1.2.10-3-1-aarch64.mind"
+  },
+  {
    "name": "postgresql-17-q3c",
    "version": "2.0.1-4",
    "release": "1",
@@ -636211,6 +637895,27 @@
    "size": 216557,
    "chunk_tag": "v1.0-chunk-40",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-40/postgresql-17-unit-7.10-1-1-aarch64.mind"
+  },
+  {
+   "name": "postgresql-17-wal2json",
+   "version": "2.6-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "PostgreSQL logical decoding JSON output plugin",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "postgresql-17",
+    "postgresql-17-jit-llvm (>= 16)",
+    "libc6 (>= 2.38)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "postgresql-17-wal2json-2.6-2-1-aarch64.mind",
+   "sha256": "30b96da3cae1c950501d06b288c6037180eff2bdd69f7ddb2dd1b3f17345a667",
+   "size": 79522,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/postgresql-17-wal2json-2.6-2-1-aarch64.mind"
   },
   {
    "name": "postgresql-all",
@@ -646157,6 +647862,27 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/python-dmidecode-data-3.12.3-4-1-aarch64.mind"
   },
   {
+   "name": "python-evdev-doc",
+   "version": "1.9.1-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Python bindings for the Linux input subsystem (docs)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libjs-jquery (>= 3.6.0)",
+    "libjs-sphinxdoc (>= 8.1)",
+    "sphinx-rtd-theme-common (>= 3.0.2+dfsg)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "python-evdev-doc-1.9.1-1-1-aarch64.mind",
+   "sha256": "23fd1c0e7de66eae2771505225d7f28eca97926bff96f1d4496663b40caa7ecd",
+   "size": 142814,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/python-evdev-doc-1.9.1-1-1-aarch64.mind"
+  },
+  {
    "name": "python-fisx-common",
    "version": "1.3.2-1",
    "release": "1",
@@ -654044,6 +655770,28 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-26/python3-barbicanclient-7.1.0-3-1-aarch64.mind"
   },
   {
+   "name": "python3-barcode",
+   "version": "0.15.1-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Create standard barcodes with Python",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "python3:any"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "python3-barcode-0.15.1-2-1-aarch64.mind",
+   "sha256": "fcd9507f6d265ffea928000bac2ae4a5535ff7e6a3245fb8d3e8d1399dd5882c",
+   "size": 239590,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/python3-barcode-0.15.1-2-1-aarch64.mind"
+  },
+  {
    "name": "python3-barectf",
    "version": "3.1.2-3",
    "release": "1",
@@ -656925,6 +658673,28 @@
    "size": 57812,
    "chunk_tag": "v1.0-chunk-31",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-31/python3-btrfsutil-6.14-1-1-aarch64.mind"
+  },
+  {
+   "name": "python3-btsocket",
+   "version": "0.3.0-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Python interface for BlueZ Bluetooth Management API",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "python3:any"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "python3-btsocket-0.3.0-1-1-aarch64.mind",
+   "sha256": "2b7d19792eeb64ffd2eff1cc3fcacb7be15a54a54128ad300ea8c41cf2cf7ac0",
+   "size": 22213,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/python3-btsocket-0.3.0-1-1-aarch64.mind"
   },
   {
    "name": "python3-bugzilla",
@@ -710230,6 +712000,28 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-23/python3-path-and-address-2.0.1-4-1-aarch64.mind"
   },
   {
+   "name": "python3-pathable",
+   "version": "0.4.4-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Python module to traverse and access resources like paths",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "python3:any"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "python3-pathable-0.4.4-1-1-aarch64.mind",
+   "sha256": "7faa5ad08501bb88160bbb2e3fa9285ba3823ba50c33caed0bfe1fe30484cd6c",
+   "size": 6477,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/python3-pathable-0.4.4-1-1-aarch64.mind"
+  },
+  {
    "name": "python3-pathos",
    "version": "0.3.3-2",
    "release": "1",
@@ -760407,6 +762199,31 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-20/qmidiarp-0.7.1+ds-1-1-aarch64.mind"
   },
   {
+   "name": "qmidictl",
+   "version": "1.0.1-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "graphical application sending MIDI Machine Control commands over the network",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libgcc-s1 (>= 3.0)",
+    "libqt6core6t64 (>= 6.7.2)",
+    "libqt6gui6 (>= 6.1.2)",
+    "libqt6network6 (>= 6.1.2)",
+    "libqt6widgets6 (>= 6.1.2)",
+    "libstdc++6 (>= 5)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "qmidictl-1.0.1-1-1-aarch64.mind",
+   "sha256": "4c9ee0f1cd330c3d8a7ebd6d1ee9eafbad5bc5ff2a0fe656caac89712ac605ea",
+   "size": 202157,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/qmidictl-1.0.1-1-1-aarch64.mind"
+  },
+  {
    "name": "qmidinet",
    "version": "1.0.1-1",
    "release": "1",
@@ -772912,6 +774729,31 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-40/qt6-webchannel-doc-html-6.8.2-2-1-aarch64.mind"
   },
   {
+   "name": "qt6-webchannel-examples",
+   "version": "6.8.2-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Qt 6 WebChannel examples",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libgcc-s1 (>= 3.3.1)",
+    "libqt6core6t64 (>= 6.8.2+dfsg~)",
+    "libqt6network6 (>= 6.8.2+dfsg~)",
+    "libqt6webchannel6 (>= 6.6.0)",
+    "libqt6websockets6 (>= 6.8.2~)",
+    "libstdc++6 (>= 5)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "qt6-webchannel-examples-6.8.2-2-1-aarch64.mind",
+   "sha256": "aa1771f70b4e2527304449eaa7a6c4376a8e0c3b6c6e43f5a8c3faee3772ca6d",
+   "size": 21900,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/qt6-webchannel-examples-6.8.2-2-1-aarch64.mind"
+  },
+  {
    "name": "qt6-webengine-dev",
    "version": "6.8.2+dfsg-4",
    "release": "1",
@@ -775024,6 +776866,32 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-25/qtsensors5-doc-html-5.15.15-2-1-aarch64.mind"
   },
   {
+   "name": "qtsensors5-examples",
+   "version": "5.15.15-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Qt 5 sensors examples",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libqt5core5t64 (>= 5.14.1)",
+    "libqt5gui5t64 (>= 5.2.0) | libqt5gui5-gles (>= 5.2.0)",
+    "libqt5qml5 (>= 5.15.15+dfsg~)",
+    "libqt5quick5 (>= 5.15.15+dfsg~) | libqt5quick5-gles (>= 5.15.15+dfsg~)",
+    "libqt5sensors5 (>= 5.6.0)",
+    "libqt5widgets5t64 (>= 5.0.2)",
+    "libstdc++6 (>= 5)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "qtsensors5-examples-5.15.15-2-1-aarch64.mind",
+   "sha256": "056a79b32430a3d46458d6962121ab4bf0354c631850c30c3934894635cf2ba5",
+   "size": 264064,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/qtsensors5-examples-5.15.15-2-1-aarch64.mind"
+  },
+  {
    "name": "qtserialport5-doc",
    "version": "5.15.15-2",
    "release": "1",
@@ -775161,6 +777029,33 @@
    "size": 161067,
    "chunk_tag": "v1.0-chunk-25",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-25/qtsvg5-doc-html-5.15.15-2-1-aarch64.mind"
+  },
+  {
+   "name": "qtsvg5-examples",
+   "version": "5.15.15-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Qt 5 SVG examples",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.35)",
+    "libgl1",
+    "libqt5core5t64 (>= 5.15.15+dfsg~)",
+    "libqt5gui5t64 (>= 5.15.15+dfsg~) | libqt5gui5-gles (>= 5.15.15+dfsg~)",
+    "libqt5network5t64 (>= 5.15.15+dfsg~)",
+    "libqt5opengl5t64 (>= 5.15.15+dfsg~)",
+    "libqt5svg5 (>= 5.6.0~beta)",
+    "libqt5widgets5t64 (>= 5.15.15+dfsg~)",
+    "libstdc++6 (>= 5)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "qtsvg5-examples-5.15.15-2-1-aarch64.mind",
+   "sha256": "9ccb684084a4d0f72d2f7aaecb5c188eba04586cc3d98c406a6f6241d1cbd2cd",
+   "size": 2228340,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/qtsvg5-examples-5.15.15-2-1-aarch64.mind"
   },
   {
    "name": "qttinysa",
@@ -776636,6 +778531,32 @@
    "size": 281711,
    "chunk_tag": "v1.0-chunk-15",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-15/qv4l2-1.30.1-1-1-aarch64.mind"
+  },
+  {
+   "name": "qvidcap",
+   "version": "1.30.1-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Capture test utility for video4linux devices",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libv4l-0t64 (= 1.30.1-1)",
+    "libc6 (>= 2.34)",
+    "libgcc-s1 (>= 3.0)",
+    "libgl1",
+    "libqt5core5t64 (>= 5.3.0)",
+    "libqt5gui5t64 (>= 5.4.0) | libqt5gui5-gles (>= 5.4.0)",
+    "libqt5widgets5t64 (>= 5.4.0)",
+    "libstdc++6 (>= 4.9)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "qvidcap-1.30.1-1-1-aarch64.mind",
+   "sha256": "b1c97ae78ebe2f7cb96947cc4f55c36ea9e48bccd15d0be4eb5ffc5911229407",
+   "size": 246175,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/qvidcap-1.30.1-1-1-aarch64.mind"
   },
   {
    "name": "qwertone",
@@ -785156,6 +787077,30 @@
    "size": 93298,
    "chunk_tag": "v1.0-chunk-41",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/r-cran-epibasix-1.5-2-1-aarch64.mind"
+  },
+  {
+   "name": "r-cran-epicalc",
+   "version": "2.15.1.0-5",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "GNU R Epidemiological calculator",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "r-base-core (>= 4.0.0-3)",
+    "r-api-4.0",
+    "r-cran-foreign",
+    "r-cran-survival",
+    "r-cran-mass",
+    "r-cran-nnet"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "r-cran-epicalc-2.15.1.0-5-1-aarch64.mind",
+   "sha256": "e125b552b5c135ce4775d7529661219f3820898ee172bea269a375f1e2bf6995",
+   "size": 778147,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/r-cran-epicalc-2.15.1.0-5-1-aarch64.mind"
   },
   {
    "name": "r-cran-epir",
@@ -840402,6 +842347,27 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-19/sa-exim-4.2.1-22-1-aarch64.mind"
   },
   {
+   "name": "sacc",
+   "version": "1.07-1+b2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "simple terminal gopher client",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libtinfo6 (>= 6)",
+    "libtls28t64 (>= 3.5.0)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "sacc-1.07-1+b2-1-aarch64.mind",
+   "sha256": "c1fe51d20e9054f080891c5d5395d47d8c574c6eb9bb9415fe52db12bd9b8ded",
+   "size": 22986,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/sacc-1.07-1+b2-1-aarch64.mind"
+  },
+  {
    "name": "safe-rm",
    "version": "1.1.0-5+b7",
    "release": "1",
@@ -841969,6 +843935,25 @@
    "size": 478042,
    "chunk_tag": "v1.0-chunk-27",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-27/sawfish-lisp-source-1.1.11.90-1.2-1-aarch64.mind"
+  },
+  {
+   "name": "sawfish-themes",
+   "version": "0.13.0-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Themes for the Sawfish window manager",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "sawfish"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "sawfish-themes-0.13.0-2-1-aarch64.mind",
+   "sha256": "449d77b168aa2d55e6c4ad5e4ef82b723b0e53ace01cef472c7635a90a4b4b34",
+   "size": 563673,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/sawfish-themes-0.13.0-2-1-aarch64.mind"
   },
   {
    "name": "sayonara",
@@ -848889,6 +850874,27 @@
    "size": 9544456,
    "chunk_tag": "v1.0-chunk-09",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-09/shotcut-data-25.03.29+ds-1-1-aarch64.mind"
+  },
+  {
+   "name": "shotman",
+   "version": "0.4.7-4",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "uncompromising screenshot GUI for Wayland compositors",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.39)",
+    "libgcc-s1 (>= 4.2)",
+    "libxkbcommon0 (>= 0.5.0)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "shotman-0.4.7-4-1-aarch64.mind",
+   "sha256": "caca1085db5068824a9795cf5aa060bdbf5831e33ab6b1524db7559eecbc9e05",
+   "size": 828945,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/shotman-0.4.7-4-1-aarch64.mind"
   },
   {
    "name": "shotwell",
@@ -865732,6 +867738,26 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-18/svn-buildpackage-0.8.10-1-aarch64.mind"
   },
   {
+   "name": "svn-load",
+   "version": "1.6-1.1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Enhanced import facility for Subversion",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "python3",
+    "python3-svn"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "svn-load-1.6-1.1-1-aarch64.mind",
+   "sha256": "7dce09d2d4cd325d0decfba0d7d3e3b5d8ab258fed02ed743f3036ffba80c516",
+   "size": 12897,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/svn-load-1.6-1.1-1-aarch64.mind"
+  },
+  {
    "name": "svn2cl",
    "version": "0.14-3",
    "release": "1",
@@ -875685,6 +877711,27 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-14/tcl9.0-9.0.1+dfsg-2-1-aarch64.mind"
   },
   {
+   "name": "tcl9.0-dev",
+   "version": "9.0.1+dfsg-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Tcl (the Tool Command Language) v9.0 - development files",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "zlib1g-dev",
+    "libtcl9.0 (= 9.0.1+dfsg-2)",
+    "tcl9.0"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "tcl9.0-dev-9.0.1+dfsg-2-1-aarch64.mind",
+   "sha256": "4a198eafe4e7b6b161e8f16b971d6dbc8c74fb88a8bd69c9182936379f13f304",
+   "size": 1693497,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/tcl9.0-dev-9.0.1+dfsg-2-1-aarch64.mind"
+  },
+  {
    "name": "tclfitsy",
    "version": "8.6+repack-5",
    "release": "1",
@@ -877443,6 +879490,31 @@
    "size": 6624339,
    "chunk_tag": "v1.0-chunk-20",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-20/termshark-2.4.0-2+b8-1-aarch64.mind"
+  },
+  {
+   "name": "termtosvg",
+   "version": "1.1.0+dfsg-5",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "record terminal sessions as standalone SVG animations",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "python3-lxml",
+    "python3-pyte (>= 0.6.0)",
+    "python3-wcwidth",
+    "python3:any"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "termtosvg-1.1.0+dfsg-5-1-aarch64.mind",
+   "sha256": "b12dd6c20c278f10557d5e6e82effc4c9d00096ffefbbe6813af6c1fb4a73e2d",
+   "size": 167714,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/termtosvg-1.1.0+dfsg-5-1-aarch64.mind"
   },
   {
    "name": "terraphast",
@@ -889506,6 +891578,29 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-19/tpm-tools-1.3.9.2-0.2+b1-1-aarch64.mind"
   },
   {
+   "name": "tpm-tools-pkcs11",
+   "version": "1.3.9.2-0.2+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Management tools for the TPM hardware (PKCS#11 tools)",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libssl3t64 (>= 3.0.0)",
+    "libtspi1 (>= 0.3.1)",
+    "opencryptoki",
+    "trousers"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "tpm-tools-pkcs11-1.3.9.2-0.2+b1-1-aarch64.mind",
+   "sha256": "b0595bd2e3f7cc55b3c67d870d6389527faf5044214bb893173c1b0ccb0b0a02",
+   "size": 51817,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/tpm-tools-pkcs11-1.3.9.2-0.2+b1-1-aarch64.mind"
+  },
+  {
    "name": "tpm-udev",
    "version": "0.6+nmu1",
    "release": "1",
@@ -896317,6 +898412,29 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-11/uim-mozc-2.29.5160.102+dfsg-1.4-1-aarch64.mind"
   },
   {
+   "name": "uim-pinyin",
+   "version": "1:1.9.6-1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Universal Input Method - pinyin input support metapackage",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "uim-data (= 1:1.9.6-1)",
+    "uim (>= 1:1.9.6-1)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [
+    "postinst",
+    "prerm"
+   ],
+   "filename": "uim-pinyin-1.1.9.6-1-1-aarch64.mind",
+   "sha256": "22a4b2fefe42cbcb3f103189e103738ec8ebbe375bc4fd00ed4ee8a4c66bc238",
+   "size": 2477,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/uim-pinyin-1.1.9.6-1-1-aarch64.mind"
+  },
+  {
    "name": "uim-plugins",
    "version": "1:1.9.6-1",
    "release": "1",
@@ -900453,6 +902571,30 @@
    "size": 344625,
    "chunk_tag": "v1.0-chunk-13",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-13/valac-bin-0.56.18-2-1-aarch64.mind"
+  },
+  {
+   "name": "valadoc",
+   "version": "0.56.18-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "API documentation generator for vala",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libglib2.0-0t64 (>= 2.48)",
+    "libvala-0.56-0 (>= 0.55.90)",
+    "libvaladoc-0.56-0 (= 0.56.18-2)",
+    "libvalacodegen-0.56-0 (= 0.56.18-2)",
+    "valac (= 0.56.18-2)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "valadoc-0.56.18-2-1-aarch64.mind",
+   "sha256": "7d019820b141be16bd728f45b9608fc5235d7a7f7c7fd7d2d4ee29f5b580a01d",
+   "size": 458063,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/valadoc-0.56.18-2-1-aarch64.mind"
   },
   {
    "name": "valgrind",
@@ -905052,6 +907194,23 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-21/vkmark-2025.01-1-1-aarch64.mind"
   },
   {
+   "name": "vkroots-headers",
+   "version": "0~202404300106git5106d8a-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Development files for vkroots framework",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "vkroots-headers-0.202404300106git5106d8a-2-1-aarch64.mind",
+   "sha256": "b5367ac0f004be896f5416049629270400b76fc680a7e8c1412b8c2df0b58896",
+   "size": 117371,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/vkroots-headers-0.202404300106git5106d8a-2-1-aarch64.mind"
+  },
+  {
    "name": "vlan",
    "version": "2.0.5+nmu3",
    "release": "1",
@@ -908167,6 +910326,28 @@
    "size": 3299486,
    "chunk_tag": "v1.0-chunk-20",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-20/wayfire-0.9.0-5-1-aarch64.mind"
+  },
+  {
+   "name": "wayfire-plugin-winshadows",
+   "version": "0.0~git20240830.11c8ab6-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Window Shadows Plugin for Wayfire",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.32)",
+    "libgcc-s1 (>= 3.0)",
+    "libstdc++6 (>= 12)",
+    "libwf-config1 (>= 0.9.0)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "wayfire-plugin-winshadows-0.0.git20240830.11c8ab6-2-1-aarch64.mind",
+   "sha256": "68064de5988c2a59abf9c3674a4b709fa15248df4eca069bd4de9fe1d04fcc9f",
+   "size": 64265,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/wayfire-plugin-winshadows-0.0.git20240830.11c8ab6-2-1-aarch64.mind"
   },
   {
    "name": "wayland-protocols",
@@ -913002,6 +915183,28 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-32/wmbubble-1.54-2+b2-1-aarch64.mind"
   },
   {
+   "name": "wmbutton",
+   "version": "0.7.1-2+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "dockapp displaying nine configurable buttons",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)",
+    "libx11-6",
+    "libxext6",
+    "libxpm4"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "wmbutton-0.7.1-2+b1-1-aarch64.mind",
+   "sha256": "7e9152d9d6f46ff9df436567eb341e93145118dc5e7f7e6a512faa29412b2278",
+   "size": 58822,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/wmbutton-0.7.1-2+b1-1-aarch64.mind"
+  },
+  {
    "name": "wmcalc",
    "version": "0.7-2+b2",
    "release": "1",
@@ -913287,6 +915490,28 @@
    "size": 22512,
    "chunk_tag": "v1.0-chunk-41",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/wmgtemp-1.2-3+b2-1-aarch64.mind"
+  },
+  {
+   "name": "wmhdplop",
+   "version": "0.9.12-2",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "hard drive activity monitor dockapp",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.38)",
+    "libimlib2t64 (>= 1.4.5)",
+    "libx11-6",
+    "libxext6"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "wmhdplop-0.9.12-2-1-aarch64.mind",
+   "sha256": "0ea9b94f2fef3bf9b78cbf3bbb2028ad5bf945fc44cf5ff4fb7e2dcb56110c2a",
+   "size": 38284,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/wmhdplop-0.9.12-2-1-aarch64.mind"
   },
   {
    "name": "wmifinfo",
@@ -923940,6 +926165,25 @@
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-24/xmldiff-2.6.3-0.2-1-aarch64.mind"
   },
   {
+   "name": "xmlformat-perl",
+   "version": "1.04-3",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "XML Document Formatter",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "perl:any"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "xmlformat-perl-1.04-3-1-aarch64.mind",
+   "sha256": "8adbcf785193735b84a14747073ee94013fa2065d3016ca6d645d499faac8d9d",
+   "size": 22771,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/xmlformat-perl-1.04-3-1-aarch64.mind"
+  },
+  {
    "name": "xmlindent",
    "version": "0.2.18-0.2",
    "release": "1",
@@ -928943,6 +931187,25 @@
    "size": 33037,
    "chunk_tag": "v1.0-chunk-35",
    "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-35/xtrx-fft-0.0.1+git20191219.98458ce-3+b2-1-aarch64.mind"
+  },
+  {
+   "name": "xttitle",
+   "version": "1.2.0-2+b1",
+   "release": "1",
+   "architecture": "aarch64",
+   "description": "Changes X terminal emulator window titles",
+   "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
+   "dependencies": [
+    "libc6 (>= 2.34)"
+   ],
+   "origin": "debian/trixie",
+   "format": 2,
+   "maintscripts": [],
+   "filename": "xttitle-1.2.0-2+b1-1-aarch64.mind",
+   "sha256": "863e6bbc48a4b293d0cd64e90fee3f4dd5c39388b4786e10b5766809b6f62f12",
+   "size": 7063,
+   "chunk_tag": "v1.0-chunk-41",
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-41/xttitle-1.2.0-2+b1-1-aarch64.mind"
   },
   {
    "name": "xutils",
