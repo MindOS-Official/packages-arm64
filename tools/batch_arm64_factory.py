@@ -431,6 +431,7 @@ def main():
     ap.add_argument("--no-clean-uploaded", dest="clean_uploaded", action="store_false")
     ap.add_argument("--upload-existing", action="store_true", help="Çıktı klasöründeki mevcut .mind dosyalarını yükle")
     ap.add_argument("--repo", default=REPO_DEFAULT, help="Hedef GitHub deposu")
+    ap.add_argument("--x86-manifest", default=str(ROOT.parent / "MindOS_packages_repo" / "packages.json"), help="x86 deposundaki paketlerin önceliklendirilmesi için packages.json yolu")
     ap.add_argument("--dry-run", action="store_true", help="Gerçek indirme yapmadan listele")
     ap.set_defaults(upload=False)
     args = ap.parse_args()
@@ -493,9 +494,29 @@ def main():
         if missing:
             log(f"  ⚠ Bulunamayan paketler: {', '.join(missing)}")
     else:
-        # Mevcut depoda olmayanları popcon sırasına göre seç
+        # x86 deposundaki paketleri tespit edip önceliklendir (parite için)
+        x86_priority_set = set()
+        x86_json = Path(args.x86_manifest) if getattr(args, "x86_manifest", None) else None
+        if x86_json and x86_json.exists():
+            try:
+                d_x = json.loads(x86_json.read_text(encoding="utf-8"))
+                pkgs = d_x.get("packages", [])
+                if isinstance(pkgs, list):
+                    x86_priority_set = {p["name"] if isinstance(p, dict) else p for p in pkgs}
+                elif isinstance(pkgs, dict):
+                    x86_priority_set = set(pkgs.keys())
+                log(f"  🎯 x86 deposundan {len(x86_priority_set)} paket öncelik kümesine eklendi.")
+            except Exception as e:
+                log(f"  ⚠ x86 manifestosu okunamadı ({e})")
+
+        # Mevcut depoda olmayanları önce x86'da olup olmamasına, sonra popcon sırasına göre seç
         candidates = [p for name, p in avail.items() if name not in existing]
-        candidates.sort(key=lambda p: popcon.get(p["name"], 0), reverse=True)
+        def sort_key(p):
+            in_x86 = 1 if p["name"] in x86_priority_set else 0
+            pop = popcon.get(p["name"], 0)
+            return (in_x86, pop)
+
+        candidates.sort(key=sort_key, reverse=True)
         candidates = candidates[:args.count]
 
     log(f"🎯 Dönüştürülecek aday paket sayısı: {len(candidates)}")
