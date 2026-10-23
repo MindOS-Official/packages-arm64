@@ -414,9 +414,60 @@ class PipelinedUploader:
             log(f"  ⚠ Toplam {len(self.failures)} yükleme hatası oluştu.")
 
 
-def get_chunk_tag(package_index):
-    chunk_num = (package_index // MAX_ASSETS) + 1
-    return f"v1.0-chunk-{chunk_num:02d}"
+def get_chunk_allocator(repo, existing_packages, max_assets=950):
+    """Dynamically determines the current open chunk from GitHub and allocates tags without overflowing 1000 assets"""
+    known_chunks = []
+    for p in existing_packages.values():
+        t = p.get("chunk_tag")
+        if t and re.fullmatch(r"v1\.0-chunk-\d+", t):
+            known_chunks.append(t)
+
+    if known_chunks:
+        highest_chunk_num = max(int(t.rsplit("-", 1)[1]) for t in set(known_chunks))
+    else:
+        highest_chunk_num = 1
+
+    try:
+        r = gh_cmd("release", "list", "-R", repo, "--limit", "100", "--json", "tagName", check=False)
+        if r.returncode == 0:
+            rel_tags = [x["tagName"] for x in json.loads(r.stdout) if x.get("tagName", "").startswith("v1.0-chunk-")]
+            if rel_tags:
+                remote_highest = max(int(t.rsplit("-", 1)[1]) for t in rel_tags)
+                highest_chunk_num = max(highest_chunk_num, remote_highest)
+    except Exception:
+        pass
+
+    current_tag = f"v1.0-chunk-{highest_chunk_num:02d}"
+
+    try:
+        r = gh_cmd("release", "view", current_tag, "-R", repo, "--json", "assets", "-q", ".assets | length", check=False)
+        if r.returncode == 0 and r.stdout.strip().isdigit():
+            current_count = int(r.stdout.strip())
+        else:
+            current_count = 0
+    except Exception:
+        current_count = 0
+
+    if current_count >= max_assets:
+        highest_chunk_num += 1
+        current_tag = f"v1.0-chunk-{highest_chunk_num:02d}"
+        current_count = 0
+
+    log(f"  🏷️ Chunk tahsisi: Başlangıç {current_tag} (mevcut: {current_count}/{max_assets})")
+    lock = threading.Lock()
+
+    def next_tag():
+        nonlocal highest_chunk_num, current_tag, current_count
+        with lock:
+            if current_count >= max_assets:
+                highest_chunk_num += 1
+                current_tag = f"v1.0-chunk-{highest_chunk_num:02d}"
+                current_count = 0
+                log(f"  🏷️ Yeni chunk'a geçildi: {current_tag}")
+            current_count += 1
+            return current_tag
+
+    return next_tag
 
 
 def main():
@@ -537,6 +588,7 @@ def main():
 
     start_time = time.time()
     staged_records = {}
+    allocate_chunk = get_chunk_allocator(args.repo, existing, max_assets=950)
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         futures = {executor.submit(process_package, p, out_dir): p["name"] for p in candidates}
         for future in concurrent.futures.as_completed(futures):
@@ -546,7 +598,7 @@ def main():
                 if ok:
                     success_count += 1
                     record = res
-                    chunk_tag = get_chunk_tag(len(existing) + len(staged_records))
+                    chunk_tag = allocate_chunk()
                     record["chunk_tag"] = chunk_tag
                     record["url"] = f"https://github.com/{args.repo}/releases/download/{chunk_tag}/{record['filename']}"
                     staged_records[str(file_or_err)] = record
