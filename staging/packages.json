@@ -106562,23 +106562,24 @@
   },
   {
    "name": "dnsdist",
-   "version": "1.9.16-0+deb13u1",
+   "version": "2.1.4-1~deb13u1",
    "release": "1",
    "architecture": "aarch64",
    "description": "DNS loadbalancer",
    "maintainer": "MindOS Team <https://github.com/MindOS-Official>",
    "dependencies": [
     "init-system-helpers (>= 1.54~)",
-    "adduser",
+    "systemd | systemd-standalone-sysusers | systemd-sysusers",
     "libbpf1 (>= 1:0.7.0)",
-    "libc6 (>= 2.38)",
+    "libc6 (>= 2.39)",
     "libcap2 (>= 1:2.10)",
     "libcdb1 (>= 0.76)",
     "libedit2 (>= 2.11-20080614-0)",
     "libfstrm0 (>= 0.4.0)",
-    "libgcc-s1 (>= 3.0)",
+    "libgcc-s1 (>= 4.2)",
+    "libgnutls30t64 (>= 3.8.1)",
     "liblmdb0 (>= 0.9.7)",
-    "libluajit-5.1-2 (>= 2.1.0~beta3+dfsg-5.3) | libluajit-5.1-2 (>= 2.1.0+openresty)",
+    "libluajit-5.1-2 (>= 2.0.4) | libluajit-5.1-2 (>= 2.1.0+openresty)",
     "libnghttp2-14 (>= 1.49.0)",
     "libre2-11-absl20240722",
     "libsnmp40t64 (>= 5.9.4+dfsg)",
@@ -106596,11 +106597,11 @@
     "prerm",
     "postrm"
    ],
-   "filename": "dnsdist-1.9.16-0+deb13u1-1-aarch64.mind",
-   "sha256": "660c3012e9f70968d687753aa99c9231dea5da8fc1b6403613d5b520bd92b243",
-   "size": 3518500,
-   "chunk_tag": "v1.0-chunk-22",
-   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-22/dnsdist-1.9.16-0+deb13u1-1-aarch64.mind"
+   "filename": "dnsdist-2.1.4-1~deb13u1-1-aarch64.mind",
+   "sha256": "6c70f80638eb9126f230f3fdcc4feceec0d577434e64206df3ee699627beb975",
+   "size": 4842784,
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-74/dnsdist-2.1.4-1.deb13u1-1-aarch64.mind",
+   "chunk_tag": "v1.0-chunk-74"
   },
   {
    "name": "dnsenum",
@@ -334942,7 +334943,7 @@
   },
   {
    "name": "ironic-api",
-   "version": "1:29.0.5-0+deb13u3",
+   "version": "1:29.0.5-0+deb13u4",
    "release": "1",
    "architecture": "aarch64",
    "description": "bare metal hypervisor API for OpenStack - API server",
@@ -334950,7 +334951,7 @@
    "dependencies": [
     "adduser",
     "debconf",
-    "ironic-common (= 1:29.0.5-0+deb13u3)",
+    "ironic-common (= 1:29.0.5-0+deb13u4)",
     "python3-keystoneclient",
     "python3-openstackclient",
     "python3-pastescript",
@@ -334966,15 +334967,15 @@
     "prerm",
     "postrm"
    ],
-   "filename": "ironic-api-1.29.0.5-0+deb13u3-1-aarch64.mind",
-   "sha256": "afcfbf096e11a6f03ed22efbe947066c63788fd36040f893d2df2e7a5c49970a",
-   "size": 37686,
-   "chunk_tag": "v1.0-chunk-37",
-   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-37/ironic-api-1.29.0.5-0+deb13u3-1-aarch64.mind"
+   "filename": "ironic-api-1:29.0.5-0+deb13u4-1-aarch64.mind",
+   "sha256": "d9e92696b97cf0bac925ce46cf0fbfcd27a3b0075793372e71cebfdc1b5acb39",
+   "size": 35627,
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-74/ironic-api-1.29.0.5-0%2Bdeb13u4-1-aarch64.mind",
+   "chunk_tag": "v1.0-chunk-74"
   },
   {
    "name": "ironic-common",
-   "version": "1:29.0.5-0+deb13u3",
+   "version": "1:29.0.5-0+deb13u4",
    "release": "1",
    "architecture": "aarch64",
    "description": "bare metal hypervisor API for OpenStack - common files",
@@ -334983,7 +334984,7 @@
     "adduser",
     "dbconfig-common",
     "ipmitool",
-    "python3-ironic (= 1:29.0.5-0+deb13u3)",
+    "python3-ironic (= 1:29.0.5-0+deb13u4)",
     "sqlite3",
     "sudo",
     "debconf (>= 0.5) | debconf-2.0",
@@ -334996,15 +334997,15 @@
     "prerm",
     "postrm"
    ],
-   "filename": "ironic-common-1.29.0.5-0+deb13u3-1-aarch64.mind",
-   "sha256": "24acc482ed1c3e69d8817f68cf2d99d2cc6bca28af375958b5cf0ea28b375898",
-   "size": 197065,
-   "chunk_tag": "v1.0-chunk-71",
-   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-71/ironic-common-1.29.0.5-0+deb13u3-1-aarch64.mind"
+   "filename": "ironic-common-1:29.0.5-0+deb13u4-1-aarch64.mind",
+   "sha256": "a2d0a4b185dd8f98672bbf3f02591e20ac7cbb8bc3c242ee0c8d3474174afd78",
+   "size": 189768,
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-74/ironic-common-1.29.0.5-0%2Bdeb13u4-1-aarch64.mind",
+   "chunk_tag": "v1.0-chunk-74"
   },
   {
    "name": "ironic-conductor",
-   "version": "1:29.0.5-0+deb13u3",
+   "version": "1:29.0.5-0+deb13u4",
    "release": "1",
    "architecture": "aarch64",
    "description": "bare metal hypervisor API for OpenStack - conductor",
@@ -335012,7 +335013,7 @@
    "dependencies": [
     "ipmitool",
     "ipxe",
-    "ironic-common (= 1:29.0.5-0+deb13u3)",
+    "ironic-common (= 1:29.0.5-0+deb13u4)",
     "open-iscsi",
     "pxelinux",
     "qemu-utils",
@@ -335027,15 +335028,15 @@
     "prerm",
     "postrm"
    ],
-   "filename": "ironic-conductor-1.29.0.5-0+deb13u3-1-aarch64.mind",
-   "sha256": "9907045f3097f2d0786de7eca910ff24939324f45d02d62039995dabe737d612",
-   "size": 13452,
-   "chunk_tag": "v1.0-chunk-37",
-   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-37/ironic-conductor-1.29.0.5-0+deb13u3-1-aarch64.mind"
+   "filename": "ironic-conductor-1:29.0.5-0+deb13u4-1-aarch64.mind",
+   "sha256": "f2c7908ecfc396f9826892d152720ee8d70783e32b3afbcb75d729f0173e8193",
+   "size": 13375,
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-74/ironic-conductor-1.29.0.5-0%2Bdeb13u4-1-aarch64.mind",
+   "chunk_tag": "v1.0-chunk-74"
   },
   {
    "name": "ironic-doc",
-   "version": "1:29.0.5-0+deb13u3",
+   "version": "1:29.0.5-0+deb13u4",
    "release": "1",
    "architecture": "aarch64",
    "description": "bare metal hypervisor API for OpenStack - doc",
@@ -335046,11 +335047,11 @@
    "origin": "debian/trixie",
    "format": 2,
    "maintscripts": [],
-   "filename": "ironic-doc-1.29.0.5-0+deb13u3-1-aarch64.mind",
-   "sha256": "e6fc94819096c316fbb1d96294a9aa85c04a910325f7b08b7040a6aa3d002ac1",
-   "size": 5124985,
-   "chunk_tag": "v1.0-chunk-68",
-   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-68/ironic-doc-1.29.0.5-0+deb13u3-1-aarch64.mind"
+   "filename": "ironic-doc-1:29.0.5-0+deb13u4-1-aarch64.mind",
+   "sha256": "33e5c71217d977061f53c5a937db2e48dd0fed2b41b1119b5f762eb3acef30de",
+   "size": 4748835,
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-74/ironic-doc-1.29.0.5-0%2Bdeb13u4-1-aarch64.mind",
+   "chunk_tag": "v1.0-chunk-74"
   },
   {
    "name": "ironic-inspector",
@@ -335108,7 +335109,7 @@
   },
   {
    "name": "ironic-novncproxy",
-   "version": "1:29.0.5-0+deb13u3",
+   "version": "1:29.0.5-0+deb13u4",
    "release": "1",
    "architecture": "aarch64",
    "description": "bare metal hypervisor API for OpenStack - NoVNC proxy",
@@ -335124,11 +335125,11 @@
     "prerm",
     "postrm"
    ],
-   "filename": "ironic-novncproxy-1.29.0.5-0+deb13u3-1-aarch64.mind",
-   "sha256": "5ce4c4f074475c0c687eb05cf2225dd8b17de1916678590b9a5c712bbe7414b1",
-   "size": 13243,
-   "chunk_tag": "v1.0-chunk-68",
-   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-68/ironic-novncproxy-1.29.0.5-0+deb13u3-1-aarch64.mind"
+   "filename": "ironic-novncproxy-1:29.0.5-0+deb13u4-1-aarch64.mind",
+   "sha256": "6c4a9f32e24f5f80f7f8cf551e7a0ef0f92672fb6eb5cf474dc6708717d4d39b",
+   "size": 13234,
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-74/ironic-novncproxy-1.29.0.5-0%2Bdeb13u4-1-aarch64.mind",
+   "chunk_tag": "v1.0-chunk-74"
   },
   {
    "name": "ironic-python-agent",
@@ -1173759,7 +1173760,7 @@
   },
   {
    "name": "postfixadmin",
-   "version": "3.3.15+ds-2",
+   "version": "3.3.15+ds-2+deb13u1",
    "release": "1",
    "architecture": "aarch64",
    "description": "Virtual mail hosting interface for Postfix",
@@ -1173787,11 +1173788,11 @@
     "prerm",
     "postrm"
    ],
-   "filename": "postfixadmin-3.3.15+ds-2-1-aarch64.mind",
-   "sha256": "6535081b5d2661e253718d078e9a63f592e275c32754e70e5af93a364bfe9449",
-   "size": 1071003,
-   "chunk_tag": "v1.0-chunk-20",
-   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-20/postfixadmin-3.3.15+ds-2-1-aarch64.mind"
+   "filename": "postfixadmin-3.3.15+ds-2+deb13u1-1-aarch64.mind",
+   "sha256": "9dd52c52d5ea2117865c796d6f319bce4c0677c28eb3431e7dd11e4e575105d4",
+   "size": 1014419,
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-74/postfixadmin-3.3.15%2Bds-2%2Bdeb13u1-1-aarch64.mind",
+   "chunk_tag": "v1.0-chunk-74"
   },
   {
    "name": "postfwd",
@@ -1260535,7 +1260536,7 @@
   },
   {
    "name": "python3-ironic",
-   "version": "1:29.0.5-0+deb13u3",
+   "version": "1:29.0.5-0+deb13u4",
    "release": "1",
    "architecture": "aarch64",
    "description": "bare metal hypervisor API for OpenStack - Python lib",
@@ -1260606,11 +1260607,11 @@
     "postinst",
     "prerm"
    ],
-   "filename": "python3-ironic-1.29.0.5-0+deb13u3-1-aarch64.mind",
-   "sha256": "c0625aed1372986a9d68140075a846798500dba88ed083666cbb89eb729927f8",
-   "size": 1852801,
-   "chunk_tag": "v1.0-chunk-37",
-   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-37/python3-ironic-1.29.0.5-0+deb13u3-1-aarch64.mind"
+   "filename": "python3-ironic-1:29.0.5-0+deb13u4-1-aarch64.mind",
+   "sha256": "1fd7a832a0fd03663c49a8caa97900cd720dba007ff0305fe8a0643ec2645bc7",
+   "size": 1704811,
+   "url": "https://github.com/MindOS-Official/packages-arm64/releases/download/v1.0-chunk-74/python3-ironic-1.29.0.5-0%2Bdeb13u4-1-aarch64.mind",
+   "chunk_tag": "v1.0-chunk-74"
   },
   {
    "name": "python3-ironic-inspector",
